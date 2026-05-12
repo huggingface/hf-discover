@@ -6,18 +6,54 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[a-zA-Z0-9.-]+)?$")
+STABLE_VERSION_RE = re.compile(r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 PROJECT_VERSION_RE = re.compile(r'(?m)^version = "([^"]+)"$')
+BUMP_PARTS = ("major", "minor", "patch")
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Bump project version and changelog.")
-    parser.add_argument("version", help="Version to prepare, for example: 0.1.4")
+    parser.add_argument("version", nargs="?", help="Version to prepare, for example: 0.1.4")
+    parser.add_argument(
+        "--bump",
+        choices=BUMP_PARTS,
+        help="Derive the next version by bumping the current project version.",
+    )
     parser.add_argument(
         "--notes",
         default="Prepare release.",
         help="Single bullet to include in the changelog entry.",
     )
     return parser.parse_args()
+
+
+def _project_version(pyproject: Path) -> str:
+    match = PROJECT_VERSION_RE.search(pyproject.read_text())
+    if match is None:
+        raise SystemExit("Could not find project version in pyproject.toml")
+    return match.group(1)
+
+
+def _bump_version(version: str, part: str) -> str:
+    match = STABLE_VERSION_RE.fullmatch(version)
+    if match is None:
+        raise SystemExit(f"Cannot {part}-bump non-stable version: {version}")
+
+    major = int(match.group("major"))
+    minor = int(match.group("minor"))
+    patch = int(match.group("patch"))
+
+    if part == "major":
+        major += 1
+        minor = 0
+        patch = 0
+    elif part == "minor":
+        minor += 1
+        patch = 0
+    else:
+        patch += 1
+
+    return f"{major}.{minor}.{patch}"
 
 
 def _replace_project_version(pyproject: Path, version: str) -> str:
@@ -51,11 +87,18 @@ def _update_changelog(changelog: Path, version: str, notes: str) -> None:
 
 def main() -> None:
     args = _parse_args()
-    version = args.version.strip()
+    pyproject = Path("pyproject.toml")
+
+    if bool(args.version) == bool(args.bump):
+        raise SystemExit("Specify exactly one of VERSION or --bump")
+
+    version = (
+        _bump_version(_project_version(pyproject), args.bump) if args.bump else args.version.strip()
+    )
     if VERSION_RE.fullmatch(version) is None:
         raise SystemExit(f"Invalid version: {version}")
 
-    previous_version = _replace_project_version(Path("pyproject.toml"), version)
+    previous_version = _replace_project_version(pyproject, version)
     if previous_version == version:
         raise SystemExit(f"pyproject.toml is already at version {version}")
 

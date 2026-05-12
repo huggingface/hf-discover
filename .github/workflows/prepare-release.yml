@@ -3,10 +3,15 @@ name: Prepare Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to prepare, for example: 0.1.4"
+      bump:
+        description: "Version part to bump"
         required: true
-        type: string
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
       notes:
         description: "Single changelog bullet"
         required: false
@@ -14,7 +19,7 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.version }}
+  group: ${{ github.workflow }}-${{ inputs.bump }}
   cancel-in-progress: true
 
 permissions:
@@ -48,16 +53,28 @@ jobs:
 
       - name: Prepare release files
         run: |
-          python scripts/bump-version.py "${{ inputs.version }}" --notes "${{ inputs.notes }}"
+          python scripts/bump-version.py --bump "${{ inputs.bump }}" --notes "${{ inputs.notes }}"
           uv lock
 
+      - name: Read prepared version
+        id: version
+        run: |
+          version="$(python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as pyproject:
+              print(tomllib.load(pyproject)["project"]["version"])
+          PY
+          )"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
       - name: Validate release artifacts
-        run: ./scripts/check-release.sh "${{ inputs.version }}"
+        run: ./scripts/check-release.sh "${{ steps.version.outputs.version }}"
 
       - name: Open release PR
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           branch="release-v${VERSION}"
           git config user.name "github-actions[bot]"

@@ -59,12 +59,12 @@ Optionally assert the expected project version:
 ```
 
 Use the **Prepare Release** GitHub Action to open a release PR for an explicit version.
-The workflow bumps `pyproject.toml`, regenerates `uv.lock`, updates `CHANGELOG.md`, runs the
-release check, and opens a `release-vX.Y.Z` pull request. After merging the PR, publish by
-pushing the matching `vX.Y.Z` tag; the tag-based release workflow builds artifacts,
-publishes them to PyPI with the `UV_PUBLISH_TOKEN` GitHub secret, attaches the artifacts to
-the GitHub Release, and restarts the Hugging Face Space when the `HF_TOKEN` secret is
-configured.
+The workflow can bump `patch`, `minor`, or `major` from the current `pyproject.toml`
+version, regenerates `uv.lock`, updates `CHANGELOG.md`, runs the release check, and opens a
+`release-vX.Y.Z` pull request. After merging the PR, publish by pushing the matching
+`vX.Y.Z` tag; the tag-based release workflow builds artifacts, publishes them to PyPI with
+the `UV_PUBLISH_TOKEN` GitHub secret, attaches the artifacts to the GitHub Release, and
+restarts the Hugging Face Space when the `HF_TOKEN` secret is configured.
 
 ### Hugging Face Space Deployment
 
