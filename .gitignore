@@ -1,0 +1,9 @@
+.pytest_cache/
+.ruff_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.fast-agent/

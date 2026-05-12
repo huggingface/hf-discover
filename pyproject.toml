@@ -1,0 +1,91 @@
+[project]
+name = "hf-agentfinder"
+version = "0.1.0"
+description = "Agent Finder registry adapter for Hugging Face Spaces"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.136.1",
+    "huggingface-hub==1.14.0",
+    "pydantic==2.13.4",
+    "rich==15.0.0",
+    "typer==0.25.1",
+    "uvicorn==0.46.0",
+]
+
+[project.scripts]
+agentfinder = "agentfinder.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.3",
+    "ruff==0.15.12",
+    "ty==0.0.34",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentfinder"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    ".agents",
+    ".codex",
+    ".fast-agent",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "TCH",  # type-checking imports
+    "B",    # flake8-bugbear
+    "BLE",  # blind except
+    "C4",   # flake8-comprehensions
+    "C90",  # mccabe complexity
+    "PL",   # pylint-derived checks
+    "RET",  # flake8-return
+    "RUF",  # Ruff-specific checks
+    "S",    # flake8-bandit security checks
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 7
+
+[tool.ruff.lint.pylint]
+max-args = 9
+max-branches = 8
+max-returns = 4
+max-statements = 40
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "PLR2004",  # Literal values are acceptable in focused assertions.
+    "S101",    # pytest uses assert statements.
+]
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ty.environment]
+python-version = "3.14"
+root = ["./src"]
+
+[tool.ty.src]
+include = ["src", "tests"]
+respect-ignore-files = true
+
+[tool.ty.rules]
+all = "error"
+
+[tool.ty.terminal]
+error-on-warning = true
+output-format = "full"

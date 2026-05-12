@@ -1,0 +1,89 @@
+name: Release Please
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    name: Prepare release PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Check out repository
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Build and smoke-test release artifacts
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: ./scripts/check-release.sh
+
+      - name: Upload build artifacts
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: hf-agentfinder-dist
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish to PyPI
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "${UV_PUBLISH_TOKEN}" ]; then
+            echo "Missing UV_PUBLISH_TOKEN repository secret." >&2
+            exit 1
+          fi
+          uv publish dist/*
+
+      - name: Restart Hugging Face Space
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "HF_TOKEN secret is not configured; skipping Space restart."
+            exit 0
+          fi
+          uv run python - <<'PY'
+          from huggingface_hub import HfApi
+
+          HfApi().restart_space("evalstate/hf-agentfinder")
+          PY
+
+      - name: Attach artifacts to GitHub release
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag_name }}
+          files: dist/*
