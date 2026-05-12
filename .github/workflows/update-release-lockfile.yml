@@ -1,0 +1,41 @@
+name: Update release lockfile
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  update-lockfile:
+    name: Update uv.lock on Release Please PRs
+    if: startsWith(github.head_ref, 'release-please--')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release PR branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Update uv.lock
+        run: uv lock
+
+      - name: Commit updated lockfile
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update lockfile for release"
+          file_pattern: uv.lock
