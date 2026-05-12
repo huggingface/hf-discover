@@ -58,15 +58,16 @@ Optionally assert the expected project version:
 
 Release Please watches conventional commits on `main`, opens a release PR, bumps
 `pyproject.toml`, and maintains `CHANGELOG.md`. Merging that release PR creates a `v*` tag.
-The Release Please workflow then builds artifacts, publishes them to PyPI with the
+The tag-based release workflow then builds artifacts, publishes them to PyPI with the
 `UV_PUBLISH_TOKEN` GitHub secret, attaches the artifacts to the GitHub Release, and restarts
-the Hugging Face Space when the `HF_TOKEN` secret is configured. The tag-based release
-workflow remains available for manually pushed `v*` tags.
+the Hugging Face Space when the `HF_TOKEN` secret is configured.
 
 Release Please needs permission to create pull requests. Enable GitHub Actions read/write
 workflow permissions and "Allow GitHub Actions to create and approve pull requests" in the
 repository settings, or configure a `RELEASE_PLEASE_TOKEN` secret containing a fine-grained
 GitHub token with repository contents, pull request, and issue write permissions.
+Using `RELEASE_PLEASE_TOKEN` is recommended because release PRs and release tags created
+with the built-in `GITHUB_TOKEN` do not trigger subsequent GitHub Actions workflows.
 
 ### Hugging Face Space Deployment
 
