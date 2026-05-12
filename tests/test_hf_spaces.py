@@ -152,8 +152,7 @@ def test_space_to_search_result_defaults_to_skill_wrapper() -> None:
     assert result.metadata["spaceId"] == "alice/cool.space"
     assert result.metadata["runtimeStage"] == "RUNNING"
     assert (
-        result.metadata["agentsMdUrl"]
-        == "https://huggingface.co/spaces/alice/cool.space/agents.md"
+        result.metadata["agentsMdUrl"] == "https://huggingface.co/spaces/alice/cool.space/agents.md"
     )
     assert "image-to-image" in result.tags
 
