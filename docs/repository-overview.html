@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hf-agentfinder repository overview</title>
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g200:#E6E3DA;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--danger:#B04A4A;--info:#5C7CA3;--serif:ui-serif,Georgia,"Times New Roman",Times,serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Monaco,Consolas,monospace;--radius:14px;--border:1.5px solid var(--g300);--shadow:0 10px 26px rgba(20,20,19,.09)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--ivory);color:var(--slate);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}a{color:var(--clay);text-underline-offset:3px}code,kbd,pre{font-family:var(--mono)}code{background:var(--g100);border-radius:4px;padding:1px 5px;font-size:.92em}.page{max-width:1180px;margin:0 auto;padding:56px 28px 90px}.hero{border-bottom:var(--border);padding-bottom:36px;margin-bottom:36px}.eyebrow{display:flex;gap:12px;align-items:center;margin:0 0 18px;font:12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--g500)}.eyebrow:before{content:"";width:24px;height:1.5px;background:var(--clay)}h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.012em;color:var(--slate)}h1{font-size:clamp(38px,5vw,62px);line-height:1.04;max-width:16ch;margin:0 0 12px}h1 em{color:var(--clay);font-style:italic}h2{font-size:29px;margin:0}h3{font-size:20px;margin:0 0 8px}.lede{max-width:760px;color:var(--g700);font-size:17px;margin:16px 0 0}.muted{color:var(--g500)}.mono{font-family:var(--mono);font-size:12px;color:var(--g500)}section{margin-top:58px}.sec-head{display:flex;gap:14px;align-items:baseline;margin-bottom:12px}.idx{font:600 13px var(--mono);color:var(--clay);width:34px;flex:0 0 auto}.sec-intro{max-width:790px;margin:0 0 24px 48px;color:var(--g700)}.grid{display:grid;gap:18px}.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.auto{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.panel,.stat,.card{background:var(--paper);border:var(--border);border-radius:var(--radius);padding:22px}.panel.oat{background:var(--oat);border-color:transparent}.stat .value{display:block;font-family:var(--serif);font-size:35px;line-height:1.05}.stat .label{display:block;margin-top:5px;font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g500)}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}.chip{display:inline-flex;align-items:center;height:23px;border-radius:999px;background:var(--g100);color:var(--g700);font-size:12px;font-weight:600;padding:0 9px}.chip.accent{background:rgba(217,119,87,.15);color:var(--clay-d)}.chip.success{background:rgba(120,140,93,.17);color:var(--olive)}.chip.info{background:rgba(92,124,163,.14);color:var(--info)}.matrix{overflow-x:auto;border:var(--border);border-radius:var(--radius);background:#fff}.matrix table{width:100%;min-width:760px;border-collapse:collapse}.matrix th,.matrix td{padding:13px 15px;border-bottom:1px solid var(--g200);vertical-align:top;text-align:left}.matrix th{background:var(--g100);font:11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g500)}.matrix tr:last-child td{border-bottom:0}.code-panel{border:var(--border);border-radius:var(--radius);overflow:hidden;background:var(--slate)}.code-head{padding:10px 15px;background:var(--g100);border-bottom:1px solid var(--g300);font:12px var(--mono);color:var(--g500)}pre{margin:0;padding:18px 20px;overflow-x:auto;background:var(--slate);color:var(--ivory);font-size:13px;line-height:1.55}.flow{display:grid;grid-template-columns:repeat(5,minmax(145px,1fr));gap:12px;align-items:stretch}.node{position:relative;background:#fff;border:var(--border);border-radius:12px;padding:16px;min-height:130px}.node:not(:last-child):after{content:"→";position:absolute;right:-18px;top:48%;font:26px var(--serif);color:var(--clay);z-index:2}.node .num{font:12px var(--mono);color:var(--clay);font-weight:700}.node strong{display:block;margin:6px 0 5px}.callout{border-left:4px solid var(--clay);background:#fff;padding:17px 19px;border-radius:0 12px 12px 0}.filetree{font-family:var(--mono);font-size:13px;line-height:1.7;color:var(--g700)}.filetree b{color:var(--slate)}.split{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.pillrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.pill{border:var(--border);background:#fff;border-radius:999px;padding:7px 12px;font:12px var(--mono);color:var(--g700)}.footer{margin-top:70px;border-top:var(--border);padding-top:22px;color:var(--g500);font-size:13px}.kbd{font-family:var(--mono);font-size:12px;background:#fff;border:var(--border);border-radius:7px;padding:4px 7px;white-space:nowrap}
+@media(max-width:900px){.cols-2,.cols-3,.split,.flow{grid-template-columns:1fr}.node:not(:last-child):after{content:"↓";right:18px;top:auto;bottom:-25px}.sec-intro{margin-left:0}.page{padding:38px 20px 70px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <p class="eyebrow">Repository explainer · generated 13 May 2026</p>
+    <h1>How <em>hf-agentfinder</em> works</h1>
+    <p class="lede">This repository is a thin Agent Finder registry adapter over Hugging Face Spaces. It turns Hugging Face semantic Space search into Agent Finder catalog entries, a CLI, a REST API, and generated <code>SKILL.md</code> artifacts.</p>
+    <div class="pillrow">
+      <span class="pill">Python ≥ 3.14</span><span class="pill">FastAPI</span><span class="pill">Typer CLI</span><span class="pill">Pydantic v2</span><span class="pill">Hugging Face Spaces backend</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="grid cols-3">
+      <div class="stat"><span class="value">6</span><span class="label">source modules</span></div>
+      <div class="stat"><span class="value">3</span><span class="label">artifact kinds</span></div>
+      <div class="stat"><span class="value">1</span><span class="label">backend registry</span></div>
+    </div>
+  </section>
+
+  <section id="mental-model">
+    <div class="sec-head"><span class="idx">01</span><h2>Mental model</h2></div>
+    <p class="sec-intro">The core of the project is an adapter pipeline: query Hugging Face’s agent-oriented semantic search, keep only running Spaces, and project each Space into Agent Finder’s value-or-reference catalog envelope.</p>
+    <div class="flow">
+      <div class="node"><span class="num">1</span><strong>Client request</strong><span class="muted">CLI command or <code>POST /search</code> with query text and optional media type.</span></div>
+      <div class="node"><span class="num">2</span><strong>Kind selection</strong><span class="muted"><code>application/ai-skill</code>, <code>application/mcp-server+json</code>, raw Space JSON, or all.</span></div>
+      <div class="node"><span class="num">3</span><strong>HF search</strong><span class="muted"><code>/api/spaces/semantic-search</code> with <code>agents=true</code>; MCP adds <code>filter=mcp-server</code>.</span></div>
+      <div class="node"><span class="num">4</span><strong>Runtime gate</strong><span class="muted">Only Spaces whose runtime stage is exactly <code>RUNNING</code> are emitted.</span></div>
+      <div class="node"><span class="num">5</span><strong>Catalog entries</strong><span class="muted">Results become skill URLs, inline MCP descriptors, or inline raw Space metadata.</span></div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="sec-head"><span class="idx">02</span><h2>Main features</h2></div>
+    <p class="sec-intro">The README frames the repository as a small adapter, but it already exposes the same core search through multiple surfaces.</p>
+    <div class="grid auto">
+      <div class="card"><h3>Spaces semantic search</h3><p>Calls Hugging Face’s semantic Spaces API with <code>agents=true</code>, optional SDK/tag filters, and optional request-scoped token forwarding.</p><div class="chips"><span class="chip accent">core</span><span class="chip">hf_search.py</span></div></div>
+      <div class="card"><h3>Agent Finder REST API</h3><p><code>POST /search</code> accepts the Agent Finder-ish search envelope and returns <code>SearchResponse</code> models with compact JSON output.</p><div class="chips"><span class="chip accent">HTTP</span><span class="chip">server.py</span></div></div>
+      <div class="card"><h3>Generated skills</h3><p><code>GET /skills/huggingface/{owner}/{space}/SKILL.md</code> wraps a Space’s <code>agents.md</code> with skill frontmatter and source metadata.</p><div class="chips"><span class="chip success">skill</span><span class="chip">hf_spaces.py</span></div></div>
+      <div class="card"><h3>MCP server discovery</h3><p>Spaces tagged <code>mcp-server</code> can be returned as <code>application/mcp-server+json</code> entries pointing at the Gradio MCP endpoint.</p><div class="chips"><span class="chip info">MCP</span><span class="chip">/gradio_api/mcp/</span></div></div>
+      <div class="card"><h3>CLI surface</h3><p><code>agentfinder spaces search</code> and the top-level <code>agentfinder search</code> command share the same search core and can print tables or JSON.</p><div class="chips"><span class="chip accent">Typer</span><span class="chip">Rich</span></div></div>
+      <div class="card"><h3>Release/deploy automation</h3><p>CI and release scripts run locked sync, Ruff format/lint, <code>ty</code>, pytest, package build checks, and deployment hooks for a Hugging Face Space.</p><div class="chips"><span class="chip">GitHub Actions</span><span class="chip">uv</span></div></div>
+    </div>
+  </section>
+
+  <section id="code-structure">
+    <div class="sec-head"><span class="idx">03</span><h2>Code structure</h2></div>
+    <p class="sec-intro">The source package is intentionally small. The best reading path is models → HF transport → conversion core → API/CLI wrappers.</p>
+    <div class="split">
+      <div class="matrix">
+        <table>
+          <thead><tr><th>File</th><th>Primary role</th><th>Important structures</th></tr></thead>
+          <tbody>
+            <tr><td><code>src/agentfinder/models.py</code></td><td>Protocol-shaped Pydantic models.</td><td><code>CatalogEntry</code>, <code>SearchQuery</code>, <code>SearchRequest</code>, <code>SearchResult</code>, <code>SearchResponse</code></td></tr>
+            <tr><td><code>src/agentfinder/hf_search.py</code></td><td>Low-level Hugging Face HTTP client and JSON normalization.</td><td><code>HfSemanticSpaceSearcher</code>, <code>SpaceSearchResult</code>, <code>SpaceRuntime</code></td></tr>
+            <tr><td><code>src/agentfinder/hf_spaces.py</code></td><td>Core domain adapter: URLs, identifiers, filtering, result conversion, skill generation.</td><td><code>search_hf_spaces</code>, <code>space_to_*_result</code>, <code>build_space_skill_markdown</code></td></tr>
+            <tr><td><code>src/agentfinder/server.py</code></td><td>FastAPI wrapper over the core adapter.</td><td><code>create_app</code>, <code>search_agent_finder</code>, token helpers, skill/agents routes</td></tr>
+            <tr><td><code>src/agentfinder/cli.py</code></td><td>Typer commands and Rich table formatting.</td><td><code>search_alias</code>, <code>spaces_search</code>, <code>serve</code>, <code>_search_response</code></td></tr>
+            <tr><td><code>tests/test_hf_spaces.py</code></td><td>Behavioral coverage with stubs and a local HTTP server.</td><td>Conversion tests, search filtering, token precedence, OpenAPI examples, generated skill frontmatter</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel oat">
+        <h3>Repository map</h3>
+        <div class="filetree">
+          <b>src/agentfinder/</b><br>
+          ├─ models.py <span class="muted">Agent Finder envelopes</span><br>
+          ├─ hf_search.py <span class="muted">HF semantic-search client</span><br>
+          ├─ hf_spaces.py <span class="muted">adapter core</span><br>
+          ├─ server.py <span class="muted">FastAPI app</span><br>
+          └─ cli.py <span class="muted">Typer entry point</span><br><br>
+          <b>spec/</b> <span class="muted">Agent Finder draft + HF search notes</span><br>
+          <b>deploy/huggingface-space/</b> <span class="muted">Docker Space runtime</span><br>
+          <b>scripts/</b> <span class="muted">release/version checks</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="data-model">
+    <div class="sec-head"><span class="idx">04</span><h2>Data model and artifact kinds</h2></div>
+    <p class="sec-intro">The models mirror the Agent Finder draft: every catalog entry must have identity fields and exactly one content delivery mechanism, either <code>url</code> or <code>data</code>.</p>
+    <div class="grid cols-2">
+      <div class="panel">
+        <h3>Value-or-reference rule</h3>
+        <p><code>CatalogEntry.validate_value_or_reference</code> rejects entries with both <code>url</code> and <code>data</code>, or neither. This keeps REST results predictable for clients.</p>
+        <div class="code-panel"><div class="code-head">models.py · core invariant</div><pre>if (self.url is None) == (self.data is None):
+    raise ValueError("exactly one of url or data must be present")</pre></div>
+      </div>
+      <div class="matrix">
+        <table>
+          <thead><tr><th>Kind</th><th>Media type</th><th>Delivery</th></tr></thead>
+          <tbody>
+            <tr><td>Generated skill</td><td><code>application/ai-skill</code></td><td><code>url</code> to generated <code>SKILL.md</code></td></tr>
+            <tr><td>MCP server</td><td><code>application/mcp-server+json</code></td><td>Inline <code>data</code> with HTTP transport and MCP URL</td></tr>
+            <tr><td>Raw HF Space</td><td><code>application/vnd.huggingface.space+json</code></td><td>Inline <code>data</code> with Space metadata</td></tr>
+            <tr><td>Legacy Space alias</td><td><code>application/huggingface-space+json</code></td><td>Accepted by HTTP routing as raw Space output</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="request-paths">
+    <div class="sec-head"><span class="idx">05</span><h2>Request paths</h2></div>
+    <div class="grid cols-2">
+      <div class="panel">
+        <h3>CLI search</h3>
+        <p>The CLI builds a <code>SearchResponse</code> through <code>_search_response</code>, then prints either JSON or a Rich table with score, type, name, SDK, stage, endpoint, and description.</p>
+        <div class="code-panel"><div class="code-head">usage</div><pre>uv run agentfinder spaces search "generate image" --limit 5
+uv run agentfinder spaces search "image generation" --kind mcp --json
+uv run agentfinder serve --port 8080</pre></div>
+      </div>
+      <div class="panel">
+        <h3>HTTP search</h3>
+        <p><code>search_agent_finder</code> maps request media type to a result kind. Unsupported media types intentionally return an empty result set rather than attempting a best-effort conversion.</p>
+        <div class="code-panel"><div class="code-head">POST /search</div><pre>{
+  "query": {
+    "text": "remove background from image",
+    "mediaType": "application/ai-skill"
+  },
+  "pageSize": 5
+}</pre></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="boundaries">
+    <div class="sec-head"><span class="idx">06</span><h2>Important boundaries and safeguards</h2></div>
+    <div class="grid auto">
+      <div class="callout"><h3>Network I/O is isolated</h3><p><code>hf_search.py</code> owns the semantic search HTTP request. <code>server.py</code> owns fetching remote <code>agents.md</code> and runs it in a threadpool so blocking urllib calls do not block the async route.</p></div>
+      <div class="callout"><h3>Token handling is request-scoped</h3><p>The server checks <code>X-HF-Authorization</code>, then <code>Authorization</code>, then <code>HF_TOKEN</code>. Header values override configured tokens and are only forwarded downstream.</p></div>
+      <div class="callout"><h3>Runtime readiness is strict</h3><p>Even when the search call includes non-running Spaces, <code>search_hf_spaces</code> emits only results with runtime stage <code>RUNNING</code>.</p></div>
+      <div class="callout"><h3>Domain selection prefers runtime metadata</h3><p>When Hugging Face runtime metadata includes a domain, generated app and MCP URLs use it. Otherwise code falls back to the standard <code>{owner}-{space}.hf.space</code> slug.</p></div>
+    </div>
+  </section>
+
+  <section id="tests">
+    <div class="sec-head"><span class="idx">07</span><h2>Tests as executable documentation</h2></div>
+    <p class="sec-intro">The single test file covers the meaningful behavior of the adapter without requiring live Hugging Face calls for most cases.</p>
+    <div class="matrix">
+      <table>
+        <thead><tr><th>Behavior</th><th>Evidence in tests</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td>Skill, Space, and MCP conversions</td><td><code>test_space_to_search_result_*</code>, MCP URL tests</td><td>Ensures entries satisfy Agent Finder artifact shapes.</td></tr>
+          <tr><td>Running-only filtering</td><td><code>test_search_hf_spaces_only_returns_running_spaces</code></td><td>Prevents dead or building Spaces from being advertised.</td></tr>
+          <tr><td>HF query construction</td><td>Local <code>HTTPServer</code> captures path and Authorization header</td><td>Verifies <code>agents=true</code>, filters, non-running flag, and token forwarding.</td></tr>
+          <tr><td>HTTP media-type routing</td><td><code>test_agent_finder_search_*</code></td><td>Documents empty unsupported-media behavior and MCP routing.</td></tr>
+          <tr><td>Token precedence</td><td><code>hf_token_from_headers</code> and route forwarding tests</td><td>Supports the README’s request-scoped HF_TOKEN requirement.</td></tr>
+          <tr><td>OpenAPI clarity</td><td>Examples and auth header documentation tests</td><td>Makes the HTTP surface discoverable for clients.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="change-guide">
+    <div class="sec-head"><span class="idx">08</span><h2>Where to change things</h2></div>
+    <div class="grid cols-3">
+      <div class="panel"><h3>Add a new artifact kind</h3><p>Start in <code>hf_spaces.py</code> with a converter and media type, then update <code>server._result_kind</code>, CLI <code>_result_type</code>, docs, and tests.</p></div>
+      <div class="panel"><h3>Change result metadata</h3><p>Edit <code>_space_metadata</code> and the relevant <code>space_to_*_result</code> function. Watch the value-or-reference invariant in <code>CatalogEntry</code>.</p></div>
+      <div class="panel"><h3>Change search behavior</h3><p>Update <code>search_hf_spaces</code> for filtering/limiting semantics, or <code>HfSemanticSpaceSearcher.search_spaces</code> for Hugging Face query parameters.</p></div>
+      <div class="panel"><h3>Change generated skills</h3><p>Modify <code>build_space_skill_markdown</code>. Tests already assert required frontmatter and source instruction inclusion.</p></div>
+      <div class="panel"><h3>Change HTTP API</h3><p>Use <code>create_app</code> and <code>search_agent_finder</code> in <code>server.py</code>. Keep CLI and HTTP wrapping the same core logic.</p></div>
+      <div class="panel"><h3>Release or deploy</h3><p>Use <code>scripts/check-release.sh</code>, GitHub Actions, and <code>deploy/huggingface-space/</code>. README documents the release flow.</p></div>
+    </div>
+  </section>
+
+  <section id="gotchas">
+    <div class="sec-head"><span class="idx">09</span><h2>Gotchas and caveats</h2></div>
+    <div class="panel">
+      <ul>
+        <li><strong><code>include_non_running</code> is not an output policy.</strong> It is passed to Hugging Face search, but emitted results are still filtered to <code>RUNNING</code>.</li>
+        <li><strong>Default kind differs by layer.</strong> Core <code>search_hf_spaces</code> defaults to <code>skill</code>; CLI and HTTP omitted media type default to <code>all</code>.</li>
+        <li><strong>Skill URLs are adapter URLs.</strong> Search results point back to this server’s generated skill route, not directly to Hugging Face.</li>
+        <li><strong>MCP is tag-based.</strong> MCP entries are only returned for Spaces tagged <code>mcp-server</code>.</li>
+        <li><strong>No persistence layer.</strong> This service is a live adapter/proxy. It does not cache search results, store tokens, or maintain a registry database.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Source facts inspected from <code>README.md</code>, <code>spec/agentfinder.md</code>, <code>pyproject.toml</code>, <code>src/agentfinder/*.py</code>, and <code>tests/test_hf_spaces.py</code>. This is a standalone local HTML artifact with embedded CSS and no external assets.</p>
+  </footer>
+</div>
+</body>
+</html>

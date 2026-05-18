@@ -1,0 +1,12 @@
+[meilisearch.vendor]
+version = "1.44.0"
+platform = "linux-amd64"
+bucket = "hf://buckets/evalstate/meilisearch-binary"
+
+[skills_index]
+bucket = "hf://buckets/evalstate/skills-index"
+
+[space]
+id = "evalstate/hf-agentfinder"
+meilisearch_mount = "/mnt/meilisearch"
+skills_index_mount = "/mnt/skills-index"

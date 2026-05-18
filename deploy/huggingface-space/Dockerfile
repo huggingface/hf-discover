@@ -10,6 +10,9 @@ RUN useradd --create-home --uid 1000 user
 USER user
 WORKDIR /home/user/app
 
+COPY --chown=user:user start-agentfinder.sh /home/user/app/start-agentfinder.sh
+RUN chmod +x /home/user/app/start-agentfinder.sh
+
 EXPOSE 7860
 
-CMD ["uvx", "--refresh", "--from", "hf-agentfinder", "agentfinder", "serve", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["/home/user/app/start-agentfinder.sh"]

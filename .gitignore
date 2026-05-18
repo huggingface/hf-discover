@@ -12,6 +12,7 @@ build/
 develop-eggs/
 dist/
 downloads/
+out/
 eggs/
 .eggs/
 lib/
@@ -72,6 +73,8 @@ dmypy.json
 .codex/
 .fast-agent/
 fastagent.jsonl
+data.ms/
+meilisearch
 
 # uv lockfile is intentionally committed.
 # uv.lock

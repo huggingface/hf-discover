@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from agentfinder import cli, server
 from agentfinder.hf_search import HfSemanticSpaceSearcher
+from agentfinder.hf_skills import search_hf_skills
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -34,6 +36,7 @@ from agentfinder.server import (
     effective_hf_token,
     hf_token_from_headers,
     search_agent_finder,
+    search_spaces_agent_finder,
 )
 
 SEARCH_BODY = {
@@ -63,6 +66,18 @@ class SearchRequestRecorder:
     authorization: str | None = None
 
 
+class RegistryRequestRecorder:
+    path: str | None = None
+    authorization: str | None = None
+    body: dict[str, object] | None = None
+
+
+class MeiliRequestRecorder:
+    path: str | None = None
+    authorization: str | None = None
+    body: dict[str, object] | None = None
+
+
 class SearchHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         SearchRequestRecorder.path = self.path
@@ -71,6 +86,75 @@ class SearchHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(SEARCH_RESPONSE)
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+
+class RegistrySearchHandler(BaseHTTPRequestHandler):
+    def do_POST(self) -> None:
+        RegistryRequestRecorder.path = self.path
+        RegistryRequestRecorder.authorization = self.headers.get("Authorization")
+        content_length = int(self.headers["Content-Length"])
+        RegistryRequestRecorder.body = json.loads(self.rfile.read(content_length))
+        response = {
+            "results": [
+                {
+                    "identifier": "urn:test:skill:image",
+                    "displayName": "Image Skill",
+                    "mediaType": "application/ai-skill",
+                    "url": "https://example.com/SKILL.md",
+                    "description": "Edit images.",
+                    "score": 42.0,
+                    "source": "test-registry",
+                }
+            ]
+        }
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode("utf-8"))
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+
+class MeiliSearchHandler(BaseHTTPRequestHandler):
+    def do_POST(self) -> None:
+        MeiliRequestRecorder.path = self.path
+        MeiliRequestRecorder.authorization = self.headers.get("Authorization")
+        content_length = int(self.headers["Content-Length"])
+        MeiliRequestRecorder.body = json.loads(self.rfile.read(content_length))
+        response = {
+            "hits": [
+                {
+                    "id": "hf-cli-low",
+                    "skill": "hf-cli",
+                    "skill_name": "hf-cli",
+                    "skill_description": "Use the Hugging Face CLI.",
+                    "path": "skills/hf-cli/SKILL.md",
+                    "url": "https://github.com/huggingface/skills/blob/main/skills/hf-cli/SKILL.md",
+                    "title": "Authentication",
+                    "_rankingScore": 0.7,
+                },
+                {
+                    "id": "hf-cli-high",
+                    "skill": "hf-cli",
+                    "skill_name": "hf-cli",
+                    "skill_description": "Use the Hugging Face CLI.",
+                    "path": "skills/hf-cli/SKILL.md",
+                    "url": "https://github.com/huggingface/skills/blob/main/skills/hf-cli/SKILL.md",
+                    "title": "Repository uploads",
+                    "_rankingScore": 0.95,
+                },
+            ]
+        }
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode("utf-8"))
 
     def log_message(self, format: str, *args: object) -> None:
         return
@@ -136,6 +220,25 @@ class RecordingSearch:
     ) -> list[SearchResult]:
         self.tokens.append(token)
         return []
+
+
+class RecordingSkillsSearch:
+    def __init__(self) -> None:
+        self.queries: list[tuple[str, int]] = []
+
+    def __call__(self, query: str, *, limit: int = 10) -> list[SearchResult]:
+        self.queries.append((query, limit))
+        return [
+            SearchResult(
+                identifier="urn:huggingface:skill:hf-cli",
+                displayName="hf-cli",
+                mediaType=AI_SKILL_MEDIA_TYPE,
+                url="https://github.com/huggingface/skills/blob/main/skills/hf-cli/SKILL.md",
+                description="Use the Hugging Face CLI.",
+                score=98.0,
+                source="https://github.com/huggingface/skills",
+            )
+        ]
 
 
 def test_space_to_search_result_defaults_to_skill_wrapper() -> None:
@@ -332,6 +435,72 @@ def test_cli_result_type_and_endpoint_support_inline_results() -> None:
     assert cli._result_endpoint(space_result) == "https://alice-mcp.hf.space"
 
 
+def test_cli_registry_search_posts_agent_finder_request_to_registry_url() -> None:
+    RegistryRequestRecorder.path = None
+    RegistryRequestRecorder.authorization = None
+    RegistryRequestRecorder.body = None
+    httpd = HTTPServer(("127.0.0.1", 0), RegistrySearchHandler)
+    thread = Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        bearer_value = "registry-token"
+        response = cli._registry_search_response(
+            f"http://127.0.0.1:{httpd.server_port}",
+            "image editing",
+            limit=3,
+            kind="skill",
+            token=bearer_value,
+        )
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
+        httpd.server_close()
+
+    assert RegistryRequestRecorder.path == "/search"
+    assert RegistryRequestRecorder.authorization == "Bearer registry-token"
+    assert RegistryRequestRecorder.body == {
+        "query": {"text": "image editing", "mediaType": "application/ai-skill"},
+        "pageSize": 3,
+    }
+    assert response.results[0].displayName == "Image Skill"
+
+
+def test_hf_skills_search_queries_meili_and_groups_section_hits_by_skill() -> None:
+    MeiliRequestRecorder.path = None
+    MeiliRequestRecorder.authorization = None
+    MeiliRequestRecorder.body = None
+    httpd = HTTPServer(("127.0.0.1", 0), MeiliSearchHandler)
+    thread = Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        results = search_hf_skills(
+            "upload files",
+            limit=5,
+            meili_url=f"http://127.0.0.1:{httpd.server_port}",
+            index="hf_skills",
+            api_key="meili-key",
+        )
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
+        httpd.server_close()
+
+    assert MeiliRequestRecorder.path == "/indexes/hf_skills/search"
+    assert MeiliRequestRecorder.authorization == "Bearer meili-key"
+    assert MeiliRequestRecorder.body == {
+        "q": "upload files",
+        "limit": 15,
+        "showRankingScore": True,
+        "showRankingScoreDetails": False,
+    }
+    assert len(results) == 1
+    assert results[0].identifier == "urn:huggingface:skill:hf-cli"
+    assert results[0].score == 95.0
+    assert results[0].metadata["title"] == "Repository uploads"
+
+
 def test_hf_semantic_space_searcher_sends_agents_filter_and_token() -> None:
     SearchRequestRecorder.path = None
     SearchRequestRecorder.authorization = None
@@ -378,12 +547,12 @@ def test_agent_finder_search_rejects_unsupported_media_type() -> None:
     assert response.results == []
 
 
-def test_agent_finder_search_routes_mcp_media_type_to_mcp_results() -> None:
+def test_nested_spaces_registry_routes_mcp_media_type_to_mcp_results() -> None:
     searcher = Searcher(
         [Space(id="alice/mcp", tags=["mcp-server"], runtime=Runtime(stage="RUNNING"))]
     )
 
-    response = search_agent_finder(
+    response = search_spaces_agent_finder(
         SearchRequest(
             query=SearchQuery(text="image editing", mediaType=MCP_SERVER_MEDIA_TYPE),
             pageSize=5,
@@ -396,6 +565,45 @@ def test_agent_finder_search_routes_mcp_media_type_to_mcp_results() -> None:
     )
 
     assert [result.mediaType for result in response.results] == [MCP_SERVER_MEDIA_TYPE]
+
+
+def test_agent_finder_search_uses_primary_skills_registry() -> None:
+    search_skills = RecordingSkillsSearch()
+
+    response = search_agent_finder(
+        SearchRequest(
+            query=SearchQuery(text="dataset upload", mediaType=AI_SKILL_MEDIA_TYPE),
+            pageSize=3,
+        ),
+        search_skills=search_skills,
+    )
+
+    assert search_skills.queries == [("dataset upload", 3)]
+    assert [result.displayName for result in response.results] == ["hf-cli"]
+
+
+def test_agent_finder_search_returns_spaces_referral_when_requested() -> None:
+    response = search_agent_finder(
+        SearchRequest(
+            query=SearchQuery(
+                text="image editing",
+                mediaType=AI_SKILL_MEDIA_TYPE,
+                federation="referrals",
+            ),
+            pageSize=5,
+        ),
+        base_url="https://agentfinder.hf.space",
+        search_skills=lambda query, *, limit=10: [],
+    )
+
+    assert response.results == []
+    assert [referral.identifier for referral in response.referrals] == [
+        "urn:huggingface:registry:spaces"
+    ]
+    assert (
+        response.referrals[0].url
+        == "https://agentfinder.hf.space/registries/huggingface/spaces/search"
+    )
 
 
 def test_generated_skill_markdown_has_required_frontmatter() -> None:
@@ -476,8 +684,12 @@ def test_search_route_forwards_effective_hf_token_to_search_stub() -> None:
     search = RecordingSearch()
     client = TestClient(create_app(token=configured, search_spaces=search))
 
-    first_response = client.post("/search", json=SEARCH_BODY, headers={"HF_TOKEN": "hf-token"})
-    second_response = client.post("/search", json=SEARCH_BODY)
+    first_response = client.post(
+        "/registries/huggingface/spaces/search",
+        json=SEARCH_BODY,
+        headers={"HF_TOKEN": "hf-token"},
+    )
+    second_response = client.post("/registries/huggingface/spaces/search", json=SEARCH_BODY)
 
     assert first_response.status_code == 200
     assert second_response.status_code == 200
@@ -489,7 +701,7 @@ def test_openapi_documents_search_auth_headers() -> None:
     response = client.get("/openapi.json")
 
     assert response.status_code == 200
-    search_operation = response.json()["paths"]["/search"]["post"]
+    search_operation = response.json()["paths"]["/registries/huggingface/spaces/search"]["post"]
     parameter_names = {parameter["name"] for parameter in search_operation["parameters"]}
 
     assert {"X-HF-Authorization", "Authorization", "HF_TOKEN"} <= parameter_names

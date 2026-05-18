@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skills Search design and deployment options</title>
+<style>
+:root{--ivory:#FAF9F5;--paper:#fff;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g200:#E6E3DA;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--warning:#C78E3F;--danger:#B04A4A;--info:#5C7CA3;--serif:ui-serif,Georgia,"Times New Roman",Times,serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Monaco,Consolas,monospace;--radius:14px;--border:1.5px solid var(--g300);--shadow:0 10px 26px rgba(20,20,19,.09)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--ivory);color:var(--slate);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}a{color:var(--clay);text-underline-offset:3px}code,kbd,pre{font-family:var(--mono)}code{background:var(--g100);border-radius:4px;padding:1px 5px;font-size:.92em}.page{max-width:1200px;margin:0 auto;padding:56px 28px 90px}.hero{border-bottom:var(--border);padding-bottom:36px;margin-bottom:36px}.eyebrow{display:flex;gap:12px;align-items:center;margin:0 0 18px;font:12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--g500)}.eyebrow:before{content:"";width:24px;height:1.5px;background:var(--clay)}h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.012em;color:var(--slate)}h1{font-size:clamp(38px,5vw,62px);line-height:1.04;max-width:18ch;margin:0 0 12px}h1 em{color:var(--clay);font-style:italic}h2{font-size:29px;margin:0}h3{font-size:20px;margin:0 0 8px}.lede{max-width:820px;color:var(--g700);font-size:17px;margin:16px 0 0}.muted{color:var(--g500)}.small{font-size:13px}.mono{font-family:var(--mono);font-size:12px;color:var(--g500)}section{margin-top:58px}.sec-head{display:flex;gap:14px;align-items:baseline;margin-bottom:12px}.idx{font:600 13px var(--mono);color:var(--clay);width:34px;flex:0 0 auto}.sec-intro{max-width:820px;margin:0 0 24px 48px;color:var(--g700)}.grid{display:grid;gap:18px}.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.auto{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.panel,.stat,.card{background:var(--paper);border:var(--border);border-radius:var(--radius);padding:22px}.panel.oat{background:var(--oat);border-color:transparent}.panel.recommend{border-color:var(--olive);box-shadow:0 0 0 3px rgba(120,140,93,.12)}.stat .value{display:block;font-family:var(--serif);font-size:34px;line-height:1.05}.stat .label{display:block;margin-top:5px;font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g500)}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}.chip{display:inline-flex;align-items:center;height:23px;border-radius:999px;background:var(--g100);color:var(--g700);font-size:12px;font-weight:600;padding:0 9px}.chip.accent{background:rgba(217,119,87,.15);color:var(--clay-d)}.chip.success{background:rgba(120,140,93,.17);color:var(--olive)}.chip.info{background:rgba(92,124,163,.14);color:var(--info)}.chip.warn{background:rgba(199,142,63,.16);color:#9B6828}.matrix{overflow-x:auto;border:var(--border);border-radius:var(--radius);background:#fff}.matrix table{width:100%;min-width:850px;border-collapse:collapse}.matrix th,.matrix td{padding:13px 15px;border-bottom:1px solid var(--g200);vertical-align:top;text-align:left}.matrix th{background:var(--g100);font:11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g500)}.matrix tr:last-child td{border-bottom:0}.score{font-family:var(--mono);font-weight:700;color:var(--olive)}.code-panel{border:var(--border);border-radius:var(--radius);overflow:hidden;background:var(--slate)}.code-head{padding:10px 15px;background:var(--g100);border-bottom:1px solid var(--g300);font:12px var(--mono);color:var(--g500)}pre{margin:0;padding:18px 20px;overflow-x:auto;background:var(--slate);color:var(--ivory);font-size:13px;line-height:1.55}.flow{display:grid;grid-template-columns:repeat(5,minmax(145px,1fr));gap:12px;align-items:stretch}.flow.four{grid-template-columns:repeat(4,minmax(165px,1fr))}.node{position:relative;background:#fff;border:var(--border);border-radius:12px;padding:16px;min-height:128px}.node:not(:last-child):after{content:"→";position:absolute;right:-18px;top:48%;font:26px var(--serif);color:var(--clay);z-index:2}.node .num{font:12px var(--mono);color:var(--clay);font-weight:700}.node strong{display:block;margin:6px 0 5px}.callout{border-left:4px solid var(--clay);background:#fff;padding:17px 19px;border-radius:0 12px 12px 0}.split{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.pillrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.pill{border:var(--border);background:#fff;border-radius:999px;padding:7px 12px;font:12px var(--mono);color:var(--g700)}.footer{margin-top:70px;border-top:var(--border);padding-top:22px;color:var(--g500);font-size:13px}.tagline{font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:8px}.decision{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start}.mark{width:24px;height:24px;border-radius:50%;background:rgba(120,140,93,.17);color:var(--olive);display:grid;place-items:center;font-weight:800}.risk{background:rgba(176,74,74,.11);border-color:rgba(176,74,74,.32)}.risk .mark{background:rgba(176,74,74,.15);color:var(--danger)}
+@media(max-width:930px){.cols-2,.cols-3,.split,.flow,.flow.four{grid-template-columns:1fr}.node:not(:last-child):after{content:"↓";right:18px;top:auto;bottom:-25px}.sec-intro{margin-left:0}.page{padding:38px 20px 70px}.matrix table{min-width:760px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <p class="eyebrow">Design options · skills search · generated 13 May 2026</p>
+    <h1>Adding <em>first-class skills search</em> to Agent Finder</h1>
+    <p class="lede">This document translates <code>plan/skills-search.md</code> into design and deployment choices. The target feature indexes the external <code>huggingface/skills</code> repository into Meilisearch, then exposes relevant skill results through the existing Agent Finder CLI and REST surfaces.</p>
+    <div class="pillrow">
+      <span class="pill">Source: huggingface/skills</span><span class="pill">Artifact: NDJSON + manifest</span><span class="pill">Index: hf_skills</span><span class="pill">Runtime: agentfinder Space</span><span class="pill">Search: Meilisearch SDK</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="grid cols-3">
+      <div class="stat"><span class="value">NDJSON</span><span class="label">canonical artifact</span></div>
+      <div class="stat"><span class="value">4</span><span class="label">implementation phases</span></div>
+      <div class="stat"><span class="value">400+</span><span class="label">expected skill docs</span></div>
+    </div>
+  </section>
+
+  <section id="recommendation">
+    <div class="sec-head"><span class="idx">01</span><h2>Recommended production shape</h2></div>
+    <p class="sec-intro">The plan’s strongest architecture separates content building from serving. A Hugging Face Job generates portable artifacts; the Agent Finder Space consumes them and syncs Meilisearch when stale.</p>
+    <div class="flow">
+      <div class="node"><span class="num">1</span><strong>huggingface/skills</strong><span class="muted">External content repository remains the source input only.</span></div>
+      <div class="node"><span class="num">2</span><strong>HF Job builds</strong><span class="muted"><code>agentfinder skills build</code> parses <code>SKILL.md</code>, chunks sections, writes artifact.</span></div>
+      <div class="node"><span class="num">3</span><strong>Bucket stores</strong><span class="muted"><code>latest/</code> and <code>commits/&lt;sha&gt;/</code> contain NDJSON, manifest, and <code>_SUCCESS</code>.</span></div>
+      <div class="node"><span class="num">4</span><strong>Space syncs</strong><span class="muted">On startup or refresh, compare manifest against loaded state.</span></div>
+      <div class="node"><span class="num">5</span><strong>Meili serves</strong><span class="muted">Agent Finder queries combine or route to indexed skill results.</span></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:18px">
+      <div class="panel recommend">
+        <div class="tagline">Recommendation</div>
+        <h3>Use artifact-first indexing with Space sync-on-start</h3>
+        <p>This is the best initial production option because the source-of-truth artifact is portable, inspectable, reproducible, and independent of Meilisearch internal backup formats.</p>
+        <div class="chips"><span class="chip success">recommended</span><span class="chip">decoupled</span><span class="chip">reproducible</span></div>
+      </div>
+      <div class="panel">
+        <div class="tagline">Keep current service alive</div>
+        <h3>Skills search should degrade independently</h3>
+        <p>If Meilisearch or the skills artifact is unavailable, the existing Hugging Face Spaces backend should still serve <code>/search</code>; health/log metadata should report skills-index unavailability.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="design-decisions">
+    <div class="sec-head"><span class="idx">02</span><h2>Settled design decisions from the plan</h2></div>
+    <p class="sec-intro">These are not open options unless implementation uncovers a blocker. They define the baseline around which deployment options should be evaluated.</p>
+    <div class="grid cols-2">
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Use Meilisearch SDK</h3><p>Integration code should use the Python <code>meilisearch</code> package, not raw HTTP, for index configuration, load, and search.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Use NDJSON as canonical artifact</h3><p>Meilisearch dumps/snapshots can exist for operational backup, but should not be the long-lived content handoff format.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Own indexing in this repository</h3><p><code>agentfinder</code> owns schema, ingestion, Meili settings, sync, and API integration. <code>huggingface/skills</code> remains external source content.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Start with one document per section</h3><p>Parse each <code>SKILL.md</code>, split by Markdown headings, preserve heading ancestry, and chunk long sections with overlap.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Expose ranking score</h3><p>Search requests should ask Meili for <code>_rankingScore</code> and carry it into Agent Finder result score and/or metadata.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Preserve existing Spaces behavior</h3><p>Indexed skills are an additive backend. Existing Hugging Face Space search, MCP discovery, and generated Space skills continue to work.</p></div></div></div>
+    </div>
+  </section>
+
+  <section id="index-design">
+    <div class="sec-head"><span class="idx">03</span><h2>Index design options</h2></div>
+    <p class="sec-intro">The initial document model is intentionally simple: one searchable document per skill section, with source metadata repeated on every hit.</p>
+    <div class="matrix">
+      <table>
+        <thead><tr><th>Option</th><th>Shape</th><th>Pros</th><th>Cons</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A. Section documents</strong></td><td>One doc per Markdown heading section from <code>SKILL.md</code>; split very long sections into parts.</td><td>Good search granularity; preserves context through <code>heading_path</code>; easy to debug in NDJSON.</td><td>Multiple hits can point to the same skill; needs grouping later if UI wants skill-level summaries.</td><td><span class="score">Use first</span></td></tr>
+          <tr><td><strong>B. Whole skill documents</strong></td><td>One doc per <code>SKILL.md</code>.</td><td>Simplest load and result shape; no duplicate skill hits.</td><td>Poorer relevance for large skills; less precise snippet/context; more noise in ranking.</td><td>Useful fallback only</td></tr>
+          <tr><td><strong>C. AST-aware chunks</strong></td><td>Markdown AST parsing with semantic chunking of lists, code blocks, and sections.</td><td>Better chunk boundaries and future display quality.</td><td>More implementation complexity; not needed for first production validation.</td><td>Later improvement</td></tr>
+          <tr><td><strong>D. Include supporting files</strong></td><td>Index <code>SKILL.md</code> plus related text files.</td><td>Broader recall for rich skills with references.</td><td>Schema and relevance tuning become harder; more source-file edge cases.</td><td>Reserve <code>kind=supporting_file</code> for later</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="artifact-design">
+    <div class="sec-head"><span class="idx">04</span><h2>Artifact and sync design</h2></div>
+    <div class="split">
+      <div class="panel">
+        <h3>Portable artifact contract</h3>
+        <p>The build step writes two required files and one completion marker. Consumers should only read a directory after <code>_SUCCESS</code> is present.</p>
+        <div class="code-panel"><div class="code-head">bucket layout</div><pre>/bucket/agentfinder/hf-skills/
+  latest/
+    hf-skills.ndjson
+    manifest.json
+    _SUCCESS
+  commits/
+    &lt;commit&gt;/
+      hf-skills.ndjson
+      manifest.json
+      _SUCCESS</pre></div>
+      </div>
+      <div class="panel">
+        <h3>Manifest controls idempotence</h3>
+        <p>The Space compares loaded state to <code>source_commit</code> and <code>schema_version</code>. If unchanged, it avoids reloading. If stale, it configures the index and loads <code>hf-skills.ndjson</code>.</p>
+        <div class="code-panel"><div class="code-head">manifest shape</div><pre>{
+  "schema_version": 1,
+  "source_repo": "huggingface/skills",
+  "source_branch": "main",
+  "source_commit": "&lt;sha&gt;",
+  "document_count": 435,
+  "index": "hf_skills",
+  "artifact": "hf-skills.ndjson"
+}</pre></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="deployment-options">
+    <div class="sec-head"><span class="idx">05</span><h2>Deployment options</h2></div>
+    <p class="sec-intro">There are two distinct deployment choices: where artifacts are built, and where Meilisearch runs. The plan favors artifact build in an HF Job and leaves Meili placement as an open question.</p>
+    <div class="matrix">
+      <table>
+        <thead><tr><th>Option</th><th>Description</th><th>Strengths</th><th>Risks / costs</th><th>Best use</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. HF Job builds artifact; Space syncs; colocated Meili</strong></td><td>Job writes NDJSON to shared storage. Agent Finder Space starts Meilisearch locally or in the same deployment envelope and syncs on startup.</td><td>Simple operational boundary; no separate external service; artifact remains canonical.</td><td>Space startup complexity; process supervision; persistence semantics depend on Space storage; resource contention.</td><td><span class="score">Likely first hosted implementation</span></td></tr>
+          <tr><td><strong>2. HF Job builds artifact; Space syncs; external Meili</strong></td><td>Agent Finder Space connects to separately hosted Meilisearch with durable storage.</td><td>Cleaner runtime separation; better durability and scaling; easier backups.</td><td>Needs service hosting, networking, secrets, and lifecycle management outside the Space.</td><td>Production scale / shared Meili</td></tr>
+          <tr><td><strong>3. HF Job builds and loads Meili directly</strong></td><td>Job writes artifact and, if <code>MEILI_URL</code> is reachable, also runs <code>agentfinder skills load</code>.</td><td>Space startup stays fast; index is ready before serving.</td><td>Job needs network access and secrets; failure path can be split between artifact write and index load.</td><td>Good once Meili endpoint is stable</td></tr>
+          <tr><td><strong>4. Space builds from GitHub on startup</strong></td><td>Space clones <code>huggingface/skills</code>, builds docs, and loads Meili during boot.</td><td>Few moving pieces; no separate artifact builder.</td><td>Slow and fragile startup; repeated work; GitHub dependency at serve time; harder to make atomic.</td><td>Local experiments only</td></tr>
+          <tr><td><strong>5. GitHub Actions builds artifact</strong></td><td>A CI workflow builds NDJSON and uploads to bucket or release assets.</td><td>Familiar automation; easy logs; independent of HF Job availability.</td><td>Cross-repo triggering and credentials; less aligned with intended HF-hosted data path.</td><td>Fallback or mirror builder</td></tr>
+          <tr><td><strong>6. Meili dump/snapshot as deploy artifact</strong></td><td>Build imports data into Meili, exports dump/snapshot, runtime restores it.</td><td>Potentially fast restore for same Meili version.</td><td>Version-coupled; less inspectable; explicitly rejected as source-of-truth in plan.</td><td>Operational backup only</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="api-options">
+    <div class="sec-head"><span class="idx">06</span><h2>Agent Finder API integration options</h2></div>
+    <p class="sec-intro">The existing <code>/search</code> endpoint already returns generated Space skills for <code>application/ai-skill</code>. Indexed repository skills need a routing or merge policy.</p>
+    <div class="grid cols-3">
+      <div class="panel recommend">
+        <h3>Option A · Source filter first</h3>
+        <p>Add a source selector such as <code>source=huggingface-skills</code> so clients can explicitly search indexed skills without changing current default behavior.</p>
+        <div class="chips"><span class="chip success">recommended first</span><span class="chip">low risk</span></div>
+      </div>
+      <div class="panel">
+        <h3>Option B · Merge by default later</h3>
+        <p>Blend indexed skills with current Space-generated skills for omitted or <code>application/ai-skill</code> searches. Requires score normalization and deduplication policy.</p>
+        <div class="chips"><span class="chip warn">later</span><span class="chip">better UX</span></div>
+      </div>
+      <div class="panel">
+        <h3>Option C · Separate endpoint</h3>
+        <p>Add a dedicated route for skills search. This isolates behavior but weakens the single Agent Finder discovery surface.</p>
+        <div class="chips"><span class="chip">debug/admin</span><span class="chip warn">less spec-aligned</span></div>
+      </div>
+    </div>
+    <div class="code-panel" style="margin-top:18px"><div class="code-head">proposed result shape from plan</div><pre>{
+  "identifier": "huggingface-skills:&lt;doc-id&gt;",
+  "displayName": "&lt;skill_name&gt;",
+  "description": "&lt;title or skill_description&gt;",
+  "mediaType": "application/ai-skill",
+  "url": "https://github.com/huggingface/skills/blob/&lt;commit&gt;/.../SKILL.md",
+  "score": 0.9679,
+  "metadata": {
+    "source": "huggingface/skills",
+    "sourceType": "meilisearch",
+    "skill": "huggingface-datasets",
+    "path": "skills/huggingface-datasets/SKILL.md",
+    "commit": "&lt;commit&gt;",
+    "rankingScore": 0.9679
+  }
+}</pre></div>
+  </section>
+
+  <section id="module-layout">
+    <div class="sec-head"><span class="idx">07</span><h2>Proposed code layout</h2></div>
+    <p class="sec-intro">The proposed package splits pure document construction, artifact I/O, Meili operations, and sync policy. That keeps CLI, HTTP, and deployment hooks thin.</p>
+    <div class="matrix">
+      <table>
+        <thead><tr><th>Module</th><th>Responsibility</th><th>Design note</th></tr></thead>
+        <tbody>
+          <tr><td><code>skills_index/documents.py</code></td><td>Clone/walk/parse/chunk <code>huggingface/skills</code> into documents.</td><td>Mostly pure functions over fixture directories; easiest to test thoroughly.</td></tr>
+          <tr><td><code>skills_index/artifacts.py</code></td><td>Read/write NDJSON and <code>manifest.json</code>.</td><td>Owns schema version and completion marker behavior.</td></tr>
+          <tr><td><code>skills_index/meili.py</code></td><td>Configure, load, and search Meilisearch using the SDK.</td><td>Owns searchable/displayed/filterable/sortable attributes and ranking score flags.</td></tr>
+          <tr><td><code>skills_index/sync.py</code></td><td>Compare artifact manifest with loaded index state and load only when stale.</td><td>Encapsulates startup/admin refresh idempotence.</td></tr>
+          <tr><td><code>hf_skills.py</code></td><td>High-level Hugging Face skills source entrypoints.</td><td>Good place for API-facing search adapter that returns Agent Finder <code>SearchResult</code>.</td></tr>
+          <tr><td><code>cli.py</code> additions</td><td><code>agentfinder skills build/load/search/sync</code>.</td><td>CLI should call the same core modules used by HTTP/deploy paths.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="phases">
+    <div class="sec-head"><span class="idx">08</span><h2>Implementation phases and acceptance</h2></div>
+    <div class="flow four">
+      <div class="node"><span class="num">Phase 1</span><strong>Local pipeline</strong><span class="muted">Build NDJSON + manifest, load 400+ docs into local Meili, CLI search returns scored hits.</span></div>
+      <div class="node"><span class="num">Phase 2</span><strong>API integration</strong><span class="muted">Add Meili-backed adapter behind source/filter option. Existing Spaces tests keep passing.</span></div>
+      <div class="node"><span class="num">Phase 3</span><strong>Artifact sync</strong><span class="muted">Startup/manual sync loads empty/stale index and skips unchanged artifacts.</span></div>
+      <div class="node"><span class="num">Phase 4</span><strong>HF Job</strong><span class="muted">Job writes <code>latest/</code> artifact, manifest, and <code>_SUCCESS</code>; Space consumes it.</span></div>
+    </div>
+  </section>
+
+  <section id="testing">
+    <div class="sec-head"><span class="idx">09</span><h2>Testing and operations</h2></div>
+    <div class="grid cols-2">
+      <div class="panel">
+        <h3>Test strategy</h3>
+        <ul>
+          <li>Pure document-building tests over small temporary fixture directories.</li>
+          <li>Manifest and NDJSON read/write roundtrip tests.</li>
+          <li>CLI smoke tests for build against local fixtures.</li>
+          <li>Meilisearch integration smoke test gated by <code>AGENTFINDER_MEILI_TEST_URL</code>.</li>
+          <li>Avoid tests for type-only DTO properties that <code>ty</code> already enforces.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Operational checks</h3>
+        <ul>
+          <li>Health metadata should say whether skills search is configured, reachable, and loaded.</li>
+          <li>Logs should include artifact commit, schema version, document count, and load result.</li>
+          <li>Refresh should be idempotent and refuse artifact directories without <code>_SUCCESS</code>.</li>
+          <li>Secrets: <code>MEILI_MASTER_KEY</code> and HF tokens must remain environment/request scoped.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="open-questions">
+    <div class="sec-head"><span class="idx">10</span><h2>Open questions and suggested defaults</h2></div>
+    <div class="matrix">
+      <table>
+        <thead><tr><th>Question</th><th>Suggested default</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td>Merge indexed skills with Space-generated skills by default?</td><td>Not initially; require explicit source/filter.</td><td>Preserves current behavior and avoids score normalization problems.</td></tr>
+          <tr><td>Should result URLs point to GitHub blob, raw URL, or Agent Finder route?</td><td>Start with GitHub blob URL; add Agent Finder route later if clients need direct installable full skill/section documents.</td><td>Blob URLs are human-readable, stable for commits, and already in the planned schema.</td></tr>
+          <tr><td>Index only <code>SKILL.md</code> or supporting files too?</td><td>Only <code>SKILL.md</code> in first production pass.</td><td>Lower schema/relevance complexity; supporting files can use reserved <code>kind=supporting_file</code> later.</td></tr>
+          <tr><td>Where should Meilisearch run?</td><td>Start colocated if operationally simple; move external when durability/scale requires it.</td><td>Keeps first deployment contained while preserving artifact portability.</td></tr>
+          <tr><td>Where does loaded manifest metadata live?</td><td>Sidecar file first; use Meili metadata/index document if SDK support is clean.</td><td>Sidecar is simple and avoids coupling to uncertain SDK metadata APIs.</td></tr>
+          <tr><td>Is top-level <code>score</code> spec-compatible?</td><td>Keep top-level <code>score</code> because current <code>SearchResult</code> has it; also include <code>metadata.rankingScore</code>.</td><td>Matches existing repository model while retaining metadata fallback.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="risks">
+    <div class="sec-head"><span class="idx">11</span><h2>Primary risks</h2></div>
+    <div class="grid cols-3">
+      <div class="panel risk"><div class="decision"><span class="mark">!</span><div><h3>Meili placement uncertainty</h3><p>The biggest deployment decision is whether Meili is colocated with the Space or separately hosted.</p></div></div></div>
+      <div class="panel risk"><div class="decision"><span class="mark">!</span><div><h3>Partial artifact reads</h3><p>Bucket promotion must be atomic or guarded by <code>_SUCCESS</code>; consumers must never read in-progress builds.</p></div></div></div>
+      <div class="panel risk"><div class="decision"><span class="mark">!</span><div><h3>Ranking comparability</h3><p>Meili ranking scores are not automatically comparable with Hugging Face semantic Space scores, so merging needs care.</p></div></div></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Source facts inspected from <code>plan/skills-search.md</code>, <code>README.md</code>, <code>deploy/huggingface-space/README.md</code>, and <code>spec/hf-search.md</code>. This standalone HTML document embeds all styling and uses no external assets.</p>
+  </footer>
+</div>
+</body>
+</html>
