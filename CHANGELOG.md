@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.5](https://github.com/huggingface/agentfinder/releases/tag/v0.1.5) - 2026-05-25
+
+### Changes
+
+- Make compatible as hf extension.
+
 ## [0.1.4](https://github.com/huggingface/agentfinder/releases/tag/v0.1.4) - 2026-05-12
 
 ### Changes
