@@ -112,14 +112,13 @@ Optionally assert the expected project version:
 ./scripts/check-release.sh 0.1.0
 ```
 
-Use the **Prepare Release** GitHub Action to prepare a release branch. The workflow can bump
-`patch`, `minor`, or `major` from the current `pyproject.toml` version, regenerates
-`uv.lock`, runs the release check, pushes `release-vX.Y.Z`, and prints the PR URL in the
-workflow summary. After merging the PR, publish by running the
-**Release** workflow with the merged version, or by pushing the matching `vX.Y.Z` tag. The
-release workflow builds artifacts, publishes them to PyPI using trusted publishing, attaches
-the artifacts to the GitHub Release, and restarts the Hugging Face Space when the `HF_TOKEN`
-secret is configured.
+Release from `main` after the intended code changes and version bump are merged. Bump
+`pyproject.toml` with `python scripts/bump-version.py --bump patch|minor|major`, run
+`uv lock`, include both files in the normal PR, and merge it after CI passes. Then run the
+**Release** GitHub Action from `main` with confirmation value `release`, or push the
+matching `vX.Y.Z` tag. The release workflow builds artifacts, publishes them to PyPI using
+trusted publishing, attaches the artifacts to the GitHub Release, and restarts the Hugging
+Face Space when the `HF_TOKEN` secret is configured.
 
 ### Hugging Face Space Deployment
 

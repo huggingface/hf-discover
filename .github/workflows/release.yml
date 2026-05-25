@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'release' to publish the current main version"
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,6 +28,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Confirm manual release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Manual releases must be run from main, got ${GITHUB_REF}." >&2
+            exit 1
+          fi
+          if [ "${{ inputs.confirm }}" != "release" ]; then
+            echo "Manual releases require confirm=release." >&2
+            exit 1
+          fi
+
       - name: Check out repository
         uses: actions/checkout@v5
 
