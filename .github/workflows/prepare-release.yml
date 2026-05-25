@@ -71,8 +71,9 @@ jobs:
       - name: Validate release artifacts
         run: ./scripts/check-release.sh "${{ steps.version.outputs.version }}"
 
-      - name: Open release PR
+      - name: Create release PR
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           branch="release-v${VERSION}"
@@ -83,20 +84,26 @@ jobs:
           git commit -m "chore: release ${VERSION}"
           git push --force-with-lease origin "${branch}"
 
-          pr_url="https://github.com/${GITHUB_REPOSITORY}/pull/new/${branch}"
+          pr_url="$(gh pr create \
+            --base main \
+            --head "${branch}" \
+            --title "Release ${VERSION}" \
+            --body "## Summary
+
+          - Bump package version to ${VERSION}
+          - Update CHANGELOG.md with the release note from the Prepare Release workflow
+          - Regenerate uv.lock
+
+          After this PR is merged, run the **Release** workflow manually with version \`${VERSION}\`, or push tag \`v${VERSION}\`, to publish to PyPI and create the GitHub release.")"
 
           cat >> "${GITHUB_STEP_SUMMARY}" <<EOF
           ## Release ${VERSION} prepared
 
-          Pushed branch \`${branch}\`.
-
-          Open the release PR:
-
-          ${pr_url}
+          Opened release PR: ${pr_url}
 
           After merging the PR, run the **Release** workflow manually with version
           \`${VERSION}\`, or push tag \`v${VERSION}\`.
           EOF
 
           echo "Release branch pushed: ${branch}"
-          echo "Open PR: ${pr_url}"
+          echo "Release PR: ${pr_url}"
