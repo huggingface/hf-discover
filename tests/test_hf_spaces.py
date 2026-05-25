@@ -602,9 +602,7 @@ def test_agent_finder_search_combines_skills_and_spaces_for_skill_requests() -> 
     )
 
     assert search_skills.queries == [("dataset upload", 3)]
-    assert search_spaces.queries == [
-        ("dataset upload", 3, "skill", "https://agentfinder.hf.space")
-    ]
+    assert search_spaces.queries == [("dataset upload", 3, "skill", "https://agentfinder.hf.space")]
     assert [result.displayName for result in response.results] == ["hf-cli", "Image Tool"]
 
 
