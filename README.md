@@ -126,6 +126,8 @@ the common media-type path through `--kind`. Planned work includes a clearer CLI
 for arbitrary structured filters and improved server-side handling/pushdown for common
 fields such as tags and Space SDK.
 
+It will also use "auto" federation.
+
 ### Release Automation
 
 Releases are built through the same quality gates as CI: locked dependency sync, Ruff
