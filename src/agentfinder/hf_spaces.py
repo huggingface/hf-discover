@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 AI_SKILL_MEDIA_TYPE = "application/ai-skill"
 MCP_SERVER_MEDIA_TYPE = "application/mcp-server+json"
+MCP_SERVER_SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 HF_SPACE_MEDIA_TYPE = "application/vnd.huggingface.space+json"
 HF_SOURCE = "https://huggingface.co"
 SPACES_URL_PREFIX = "https://evalstate-hf-agentfinder.hf.space"
@@ -136,6 +137,12 @@ def skill_url_for_space(space_id: str, *, base_url: str = DEFAULT_BASE_URL) -> s
     return f"{base}/skills/huggingface/{quote(owner, safe='')}/{quote(name, safe='')}/SKILL.md"
 
 
+def mcp_server_json_url_for_space(space_id: str, *, base_url: str = DEFAULT_BASE_URL) -> str:
+    owner, name = split_space_id(space_id)
+    base = base_url.rstrip("/")
+    return f"{base}/mcp/huggingface/{quote(owner, safe='')}/{quote(name, safe='')}/server.json"
+
+
 def _space_tags(space: SpaceSearchResultLike) -> list[str]:
     tags = ["huggingface", "space"]
     if space.sdk:
@@ -253,21 +260,22 @@ def space_to_skill_result(
     )
 
 
-def space_to_mcp_result(space: SpaceSearchResultLike) -> SearchResult:
+def space_to_mcp_result(
+    space: SpaceSearchResultLike,
+    *,
+    base_url: str = DEFAULT_BASE_URL,
+) -> SearchResult:
     return SearchResult(
         identifier=hf_space_mcp_identifier(space.id),
         displayName=f"{space.title or space.id} MCP Server",
         type=MCP_SERVER_MEDIA_TYPE,
-        data={
-            "name": skill_name_for_space(space.id),
-            "transport": "http",
-            "url": hf_space_mcp_url(space.id, app_url=_space_app_url(space)),
-        },
+        url=mcp_server_json_url_for_space(space.id, base_url=base_url),
         description=space.ai_short_description,
         tags=_space_tags(space),
         metadata={
             "sourceType": "huggingface-space",
             **_space_metadata(space),
+            "mcpUrl": hf_space_mcp_url(space.id, app_url=_space_app_url(space)),
         },
         score=_score(space),
         source=HF_SOURCE,
@@ -283,7 +291,7 @@ def space_to_search_result(
     if kind == "space":
         return space_to_space_result(space)
     if kind == "mcp":
-        return space_to_mcp_result(space)
+        return space_to_mcp_result(space, base_url=base_url)
     return space_to_skill_result(space, base_url=base_url)
 
 
@@ -306,7 +314,7 @@ def _results_for_space(
     if kind == "all":
         results = [space_to_skill_result(space, base_url=base_url)]
         if is_mcp_space(space):
-            results.append(space_to_mcp_result(space))
+            results.append(space_to_mcp_result(space, base_url=base_url))
         return results
     if kind == "mcp" and not is_mcp_space(space):
         return []
@@ -379,3 +387,62 @@ Use this skill when the user wants to use the Hugging Face Space `{space_id}`.
 
 {agents_md.strip()}
 """
+
+
+def _space_card_data(space: object) -> dict[str, object]:
+    card_data = getattr(space, "card_data", None)
+    if isinstance(card_data, dict):
+        return card_data
+    card_data = getattr(space, "cardData", None)
+    return card_data if isinstance(card_data, dict) else {}
+
+
+def _card_string(card_data: dict[str, object], key: str) -> str | None:
+    value = card_data.get(key)
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _server_json_description(space: SpaceSearchResultLike, card_data: dict[str, object]) -> str:
+    return (
+        space.ai_short_description
+        or _card_string(card_data, "short_description")
+        or f"MCP server exposed by the Hugging Face Space {space.id}."
+    )
+
+
+def build_space_mcp_server_json(space: SpaceSearchResultLike) -> dict[str, object]:
+    card_data = _space_card_data(space)
+    app_url = _space_app_url(space)
+    title = _card_string(card_data, "title") or space.title or f"{space.id} MCP Server"
+    payload: dict[str, object] = {
+        "$schema": MCP_SERVER_SCHEMA_URL,
+        "name": skill_name_for_space(space.id),
+        "title": title,
+        "description": _server_json_description(space, card_data),
+        "version": "1.0.0",
+        "remotes": [
+            {
+                "type": "streamable-http",
+                "url": hf_space_mcp_url(space.id, app_url=app_url),
+            }
+        ],
+        "websiteUrl": hf_space_url(space.id),
+        "_meta": {
+            "source": "huggingface-space",
+            "spaceId": space.id,
+            "hubUrl": hf_space_url(space.id),
+            "appUrl": app_url,
+            "sdk": space.sdk,
+            "tags": space.tags or [],
+            "runtimeStage": _runtime_stage(space),
+        },
+    }
+    license_name = _card_string(card_data, "license")
+    sdk_version = _card_string(card_data, "sdk_version")
+    meta = payload["_meta"]
+    if isinstance(meta, dict):
+        if license_name is not None:
+            meta["license"] = license_name
+        if sdk_version is not None:
+            meta["sdkVersion"] = sdk_version
+    return payload

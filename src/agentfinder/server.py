@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, Protocol
+from urllib.error import HTTPError
+from urllib.parse import quote
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
@@ -17,9 +21,12 @@ from agentfinder.hf_spaces import (
     MCP_SERVER_MEDIA_TYPE,
     SPACES_URL_PREFIX,
     SpaceResultKind,
+    build_space_mcp_server_json,
     build_space_skill_markdown,
     hf_space_agents_md_url,
+    is_mcp_space,
     search_hf_spaces,
+    split_space_id,
 )
 from agentfinder.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
 
@@ -29,6 +36,8 @@ if TYPE_CHECKING:
 BEARER_PREFIX = "Bearer "
 AI_CATALOG_MEDIA_TYPE = "application/ai-catalog+json"
 AI_REGISTRY_MEDIA_TYPE = "application/ai-registry+json"
+HF_ENDPOINT = "https://huggingface.co"
+HTTP_NOT_FOUND = 404
 PUBLIC_BASE_URL_ENV = "AGENTFINDER_PUBLIC_BASE_URL"
 URN_AI_PUBLISHER_PARTS = 3
 SEARCH_REQUEST_EXAMPLES: dict[str, Example] = {
@@ -95,6 +104,36 @@ class SearchSkills(Protocol):
         *,
         limit: int = 10,
     ) -> list[SearchResult]: ...
+
+
+class FetchSpaceInfo(Protocol):
+    def __call__(self, space_id: str, *, token: bool | str | None = None) -> HfSpaceInfo: ...
+
+
+@dataclass
+class HfSpaceRuntimeInfo:
+    stage: str | None
+    raw: dict[str, object]
+
+
+@dataclass
+class HfSpaceInfo:
+    id: str
+    author: str
+    title: str
+    host: str | None
+    subdomain: str | None
+    emoji: str | None
+    sdk: str | None
+    likes: int
+    private: bool
+    tags: list[str] | None
+    runtime: HfSpaceRuntimeInfo | None
+    ai_short_description: str | None
+    ai_category: str | None
+    semantic_relevancy_score: float | None
+    trending_score: int | None
+    card_data: dict[str, object]
 
 
 def _base_url(request: Request) -> str:
@@ -380,6 +419,86 @@ def fetch_agents_md(space_id: str) -> str:
         return response.read().decode("utf-8")
 
 
+def _string(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _optional_string(value: object) -> str | None:
+    return value if isinstance(value, str) else None
+
+
+def _integer(value: object) -> int:
+    return value if isinstance(value, int) else 0
+
+
+def _optional_integer(value: object) -> int | None:
+    return value if isinstance(value, int) else None
+
+
+def _string_list(value: object) -> list[str] | None:
+    if not isinstance(value, list):
+        return None
+    return [item for item in value if isinstance(item, str)]
+
+
+def _dict(value: object) -> dict[str, object]:
+    if not isinstance(value, dict):
+        return {}
+    return {key: item for key, item in value.items() if isinstance(key, str)}
+
+
+def _space_short_description(data: dict[str, object], card_data: dict[str, object]) -> str | None:
+    direct = _optional_string(data.get("ai_short_description"))
+    if direct is not None:
+        return direct
+    return _optional_string(card_data.get("short_description"))
+
+
+def _space_title(data: dict[str, object], card_data: dict[str, object]) -> str:
+    return _string(data.get("title")) or _string(card_data.get("title")) or _string(data.get("id"))
+
+
+def _space_info_from_payload(data: dict[str, object]) -> HfSpaceInfo:
+    runtime_data = _dict(data.get("runtime"))
+    card_data = _dict(data.get("cardData"))
+    return HfSpaceInfo(
+        id=_string(data.get("id")),
+        author=_string(data.get("author")),
+        title=_space_title(data, card_data),
+        host=_optional_string(data.get("host")),
+        subdomain=_optional_string(data.get("subdomain")),
+        emoji=_optional_string(data.get("emoji")),
+        sdk=_optional_string(data.get("sdk")) or _optional_string(card_data.get("sdk")),
+        likes=_integer(data.get("likes")),
+        private=data.get("private") is True,
+        tags=_string_list(data.get("tags")),
+        runtime=(
+            HfSpaceRuntimeInfo(stage=_optional_string(runtime_data.get("stage")), raw=runtime_data)
+            if runtime_data
+            else None
+        ),
+        ai_short_description=_space_short_description(data, card_data),
+        ai_category=_optional_string(data.get("ai_category")),
+        semantic_relevancy_score=None,
+        trending_score=_optional_integer(data.get("trendingScore")),
+        card_data=card_data,
+    )
+
+
+def fetch_space_info(space_id: str, *, token: bool | str | None = None) -> HfSpaceInfo:
+    owner, name = split_space_id(space_id)
+    url = f"{HF_ENDPOINT}/api/spaces/{quote(owner, safe='')}/{quote(name, safe='')}"
+    headers = {"User-Agent": "agentfinder/0.1"}
+    if isinstance(token, str):
+        headers["Authorization"] = f"Bearer {token}"
+    request = UrlRequest(url, headers=headers)  # noqa: S310 - public HF API endpoint
+    with urlopen(request, timeout=30) as response:  # noqa: S310 - public HF API endpoint
+        data = json.loads(response.read().decode("utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("Unexpected Hugging Face Space info response")
+    return _space_info_from_payload(data)
+
+
 def _add_spaces_search_route(
     app: FastAPI,
     *,
@@ -447,6 +566,86 @@ def _add_spaces_search_route(
         )
 
 
+def _add_mcp_server_json_route(
+    app: FastAPI,
+    *,
+    token: bool | str | None,
+    fetch_space: FetchSpaceInfo,
+) -> None:
+    @app.get(
+        "/mcp/huggingface/{owner}/{space_name}/server.json",
+        response_class=JSONResponse,
+    )
+    async def hf_space_mcp_server_json(
+        owner: str,
+        space_name: str,
+        request: Request,
+        x_hf_authorization: Annotated[
+            str | None,
+            Header(
+                alias="X-HF-Authorization",
+                description=(
+                    "Optional request-scoped Hugging Face token. Use `Bearer hf_...`. "
+                    "Highest precedence."
+                ),
+            ),
+        ] = None,
+        authorization: Annotated[
+            str | None,
+            Header(
+                alias="Authorization",
+                description=(
+                    "Optional request-scoped Hugging Face token. Use `Bearer hf_...`. "
+                    "Used when `X-HF-Authorization` is absent."
+                ),
+            ),
+        ] = None,
+        hf_token: Annotated[
+            str | None,
+            Header(
+                alias="HF_TOKEN",
+                description=(
+                    "Optional request-scoped Hugging Face token without a Bearer prefix. "
+                    "Used when authorization headers are absent."
+                ),
+            ),
+        ] = None,
+    ) -> JSONResponse:
+        _ = x_hf_authorization, authorization, hf_token
+        space_id = f"{owner}/{space_name}"
+        try:
+            space = await run_in_threadpool(
+                fetch_space,
+                space_id,
+                token=effective_hf_token(
+                    request_token=hf_token_from_headers(request.headers),
+                    configured_token=token,
+                ),
+            )
+        except HTTPError as exc:
+            if exc.code == HTTP_NOT_FOUND:
+                raise HTTPException(
+                    status_code=HTTP_NOT_FOUND,
+                    detail="Hugging Face Space not found",
+                ) from exc
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to fetch Hugging Face Space info: HTTP {exc.code}",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to fetch Hugging Face Space info: {exc}",
+            ) from exc
+
+        if not is_mcp_space(space):
+            raise HTTPException(
+                status_code=HTTP_NOT_FOUND,
+                detail="Hugging Face Space is not tagged as an MCP server",
+            )
+        return JSONResponse(build_space_mcp_server_json(space), media_type="application/json")
+
+
 def _add_catalog_route(app: FastAPI) -> None:
     @app.get(
         "/.well-known/ai-catalog.json",
@@ -470,6 +669,7 @@ def create_app(
     token: bool | str | None = None,
     search_skills: SearchSkills = search_hf_skills,
     search_spaces: SearchSpaces = search_hf_spaces,
+    fetch_space: FetchSpaceInfo = fetch_space_info,
 ) -> FastAPI:
     app = FastAPI(title="Hugging Face Agent Finder")
 
@@ -546,6 +746,8 @@ def create_app(
         token=token,
         search_spaces=search_spaces,
     )
+
+    _add_mcp_server_json_route(app, token=token, fetch_space=fetch_space)
 
     @app.get(
         "/skills/huggingface/{owner}/{space_name}/SKILL.md",

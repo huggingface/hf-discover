@@ -103,13 +103,15 @@ The Agent Finder mapping is:
 ```json
 {
   "mediaType": "application/mcp-server+json",
-  "data": {
-    "name": "hf-space-mcp-tools-flux-1-kontext-dev",
-    "transport": "http",
-    "url": "https://mcp-tools-flux-1-kontext-dev.hf.space/gradio_api/mcp/"
-  }
+  "url": "https://agentfinder.example/mcp/huggingface/mcp-tools/FLUX.1-Kontext-Dev/server.json"
 }
 ```
+
+The adapter materializes that URL as an MCP Registry-style `server.json`. The route performs
+a direct `GET https://huggingface.co/api/spaces/{owner}/{space}` lookup, verifies the Space
+is tagged `mcp-server`, and returns a descriptor whose `remotes[]` contains the Gradio MCP
+endpoint as a `streamable-http` remote. Non-MCP Spaces return an error instead of a
+descriptor.
 
 MCP entries should only be generated for Spaces returned by the agent-oriented Hub search
 and tagged `mcp-server`. Unfiltered Agent Finder searches may return both the generated

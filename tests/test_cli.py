@@ -4,14 +4,42 @@ from importlib.metadata import entry_points, version
 from inspect import signature
 from typing import Any, cast
 
+import typer
 from pydantic import ValidationError
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from agentfinder import cli
+from agentfinder import cli, server
 from agentfinder.models import SearchResponse
 
 app = cli.app
+
+
+class RecordingFetchSpaceInfo:
+    def __init__(self, tags: list[str] | None = None) -> None:
+        self.calls: list[tuple[str, bool | str | None]] = []
+        self.space = server.HfSpaceInfo(
+            id="alice/mcp",
+            author="alice",
+            title="Alice MCP",
+            host="https://alice-mcp.hf.space",
+            subdomain="alice-mcp",
+            emoji=None,
+            sdk="gradio",
+            likes=1,
+            private=False,
+            tags=tags or ["gradio", "mcp-server"],
+            runtime=server.HfSpaceRuntimeInfo(stage="RUNNING", raw={"stage": "RUNNING"}),
+            ai_short_description="Alice MCP tools.",
+            ai_category=None,
+            semantic_relevancy_score=None,
+            trending_score=None,
+            card_data={"title": "Alice MCP", "license": "mit"},
+        )
+
+    def __call__(self, space_id: str, *, token: bool | str | None = None) -> server.HfSpaceInfo:
+        self.calls.append((space_id, token))
+        return self.space
 
 
 def test_version_option_prints_installed_project_version() -> None:
@@ -50,6 +78,43 @@ def test_search_command_hides_local_base_url_escape_hatch() -> None:
     assert options_by_name["registry_url"].hidden is False
     assert options_by_name["local"].hidden is False
     assert options_by_name["base_url"].hidden is True
+
+
+def test_mcp_server_json_command_is_registered() -> None:
+    command = cast("Any", get_command(app))
+
+    assert "mcp-server-json" in command.commands
+
+
+def test_mcp_server_json_helper_fetches_space_and_builds_descriptor() -> None:
+    fetch_space = RecordingFetchSpaceInfo()
+    token = f"hf_{'test-token'}"
+
+    payload = cli._mcp_server_json_for_space(
+        "alice/mcp",
+        token=token,
+        fetch_space=fetch_space,
+    )
+
+    assert fetch_space.calls == [("alice/mcp", token)]
+    assert payload["name"] == "hf-space-alice-mcp"
+    assert payload["description"] == "Alice MCP tools."
+    assert payload["remotes"] == [
+        {"type": "streamable-http", "url": "https://alice-mcp.hf.space/gradio_api/mcp/"}
+    ]
+
+
+def test_mcp_server_json_helper_rejects_non_mcp_spaces() -> None:
+    fetch_space = RecordingFetchSpaceInfo(tags=["gradio"])
+
+    try:
+        cli._mcp_server_json_for_space("alice/not-mcp", fetch_space=fetch_space)
+    except typer.BadParameter as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected non-MCP Space to fail")
+
+    assert "not tagged as an MCP server" in message
 
 
 def test_registry_response_error_message_explains_missing_v5_type_field() -> None:

@@ -25,10 +25,12 @@ from agentfinder.hf_spaces import (
     SpaceResultKind,
     SpaceSearcher,
     SpaceSearchResultLike,
+    build_space_mcp_server_json,
     build_space_skill_markdown,
     hf_space_agents_md_url,
     hf_space_app_url,
     hf_space_mcp_url,
+    mcp_server_json_url_for_space,
     search_hf_spaces,
     space_to_search_result,
 )
@@ -226,11 +228,10 @@ class RecordingSearch:
         self.tokens.append(token)
         self.queries.append((query, limit, kind, base_url))
         media_type = MCP_SERVER_MEDIA_TYPE if kind == "mcp" else AI_SKILL_MEDIA_TYPE
-        url = None if kind == "mcp" else f"{base_url}/skills/huggingface/alice/image-tool/SKILL.md"
-        data = (
-            {"name": "image-tool", "transport": "http", "url": "https://alice.hf.space/mcp"}
+        url = (
+            f"{base_url}/mcp/huggingface/alice/image-tool/server.json"
             if kind == "mcp"
-            else None
+            else f"{base_url}/skills/huggingface/alice/image-tool/SKILL.md"
         )
         return [
             SearchResult(
@@ -238,7 +239,6 @@ class RecordingSearch:
                 displayName="Image Tool",
                 type=media_type,
                 url=url,
-                data=data,
                 description="Edit images with a Space.",
                 score=91.0,
                 source="https://huggingface.co",
@@ -263,6 +263,58 @@ class RecordingSkillsSearch:
                 source="https://github.com/huggingface/skills",
             )
         ]
+
+
+class RecordingFetchSpaceInfo:
+    def __init__(self, space: server.HfSpaceInfo) -> None:
+        self.space = space
+        self.calls: list[tuple[str, bool | str | None]] = []
+
+    def __call__(self, space_id: str, *, token: bool | str | None = None) -> server.HfSpaceInfo:
+        self.calls.append((space_id, token))
+        return self.space
+
+
+def space_info(
+    *,
+    tags: list[str] | None = None,
+    runtime: server.HfSpaceRuntimeInfo | None = None,
+) -> server.HfSpaceInfo:
+    return server.HfSpaceInfo(
+        id="mcp-tools/FLUX.1-Kontext-Dev",
+        author="mcp-tools",
+        title="FLUX.1 Kontext",
+        host="https://mcp-tools-flux-1-kontext-dev.hf.space",
+        subdomain="mcp-tools-flux-1-kontext-dev",
+        emoji="⚡",
+        sdk="gradio",
+        likes=12,
+        private=False,
+        tags=tags or ["gradio", "mcp-server", "region:us"],
+        runtime=runtime
+        or server.HfSpaceRuntimeInfo(
+            stage="RUNNING",
+            raw={
+                "stage": "RUNNING",
+                "domains": [
+                    {
+                        "domain": "mcp-tools-flux-1-kontext-dev.hf.space",
+                        "stage": "READY",
+                    }
+                ],
+            },
+        ),
+        ai_short_description="Kontext image editing on FLUX[dev]",
+        ai_category=None,
+        semantic_relevancy_score=None,
+        trending_score=None,
+        card_data={
+            "title": "FLUX.1 Kontext",
+            "short_description": "Kontext image editing on FLUX[dev]",
+            "license": "mit",
+            "sdk_version": "5.49.1",
+        },
+    )
 
 
 def test_space_to_search_result_defaults_to_skill_wrapper() -> None:
@@ -308,8 +360,8 @@ def test_space_results_prefer_hub_host_for_app_and_mcp_urls() -> None:
 
     assert raw_result.data is not None
     assert raw_result.data["appUrl"] == "https://runtime-host.hf.space"
-    assert mcp_result.data is not None
-    assert mcp_result.data["url"] == "https://runtime-host.hf.space/gradio_api/mcp/"
+    assert mcp_result.url == f"{SPACES_URL_PREFIX}/mcp/huggingface/alice/mcp/server.json"
+    assert mcp_result.metadata["mcpUrl"] == "https://runtime-host.hf.space/gradio_api/mcp/"
 
 
 def test_space_results_use_hub_subdomain_before_best_effort_slug() -> None:
@@ -320,14 +372,75 @@ def test_space_results_use_hub_subdomain_before_best_effort_slug() -> None:
 
     assert raw_result.data is not None
     assert raw_result.data["appUrl"] == "https://canonical-space-subdomain.hf.space"
-    assert mcp_result.data is not None
-    assert mcp_result.data["url"] == "https://canonical-space-subdomain.hf.space/gradio_api/mcp/"
+    assert mcp_result.url == (
+        f"{SPACES_URL_PREFIX}/mcp/huggingface/owner/name-with-ambiguous-host/server.json"
+    )
+    assert mcp_result.metadata["mcpUrl"] == (
+        "https://canonical-space-subdomain.hf.space/gradio_api/mcp/"
+    )
 
 
 def test_hf_space_mcp_url_uses_gradio_mcp_endpoint() -> None:
     assert (
         hf_space_mcp_url("Alice/Cool.Space") == "https://alice-cool-space.hf.space/gradio_api/mcp/"
     )
+
+
+def test_mcp_server_json_url_for_space_points_at_agentfinder_materializer() -> None:
+    assert mcp_server_json_url_for_space(
+        "Alice/Cool.Space",
+        base_url="https://agentfinder.example",
+    ) == "https://agentfinder.example/mcp/huggingface/Alice/Cool.Space/server.json"
+
+
+def test_build_space_mcp_server_json_uses_space_info_and_remote_endpoint() -> None:
+    payload = build_space_mcp_server_json(space_info())
+
+    assert payload["name"] == "hf-space-mcp-tools-flux-1-kontext-dev"
+    assert payload["title"] == "FLUX.1 Kontext"
+    assert payload["description"] == "Kontext image editing on FLUX[dev]"
+    assert payload["websiteUrl"] == "https://huggingface.co/spaces/mcp-tools/FLUX.1-Kontext-Dev"
+    assert payload["remotes"] == [
+        {
+            "type": "streamable-http",
+            "url": "https://mcp-tools-flux-1-kontext-dev.hf.space/gradio_api/mcp/",
+        }
+    ]
+    meta = payload["_meta"]
+    assert isinstance(meta, dict)
+    meta = cast("dict[str, object]", meta)
+    assert meta["spaceId"] == "mcp-tools/FLUX.1-Kontext-Dev"
+    assert meta["runtimeStage"] == "RUNNING"
+    assert meta["license"] == "mit"
+    assert meta["sdkVersion"] == "5.49.1"
+
+
+def test_mcp_server_json_route_fetches_space_info_and_synthesizes_descriptor() -> None:
+    fetch_space = RecordingFetchSpaceInfo(space_info())
+    client = TestClient(create_app(fetch_space=fetch_space))
+
+    response = client.get(
+        "/mcp/huggingface/mcp-tools/FLUX.1-Kontext-Dev/server.json",
+        headers={"X-HF-Authorization": "Bearer hf_test-token"},
+    )
+
+    assert response.status_code == 200
+    assert fetch_space.calls == [("mcp-tools/FLUX.1-Kontext-Dev", "hf_test-token")]
+    payload = response.json()
+    assert payload["name"] == "hf-space-mcp-tools-flux-1-kontext-dev"
+    assert payload["remotes"][0]["url"] == (
+        "https://mcp-tools-flux-1-kontext-dev.hf.space/gradio_api/mcp/"
+    )
+
+
+def test_mcp_server_json_route_rejects_non_mcp_spaces() -> None:
+    fetch_space = RecordingFetchSpaceInfo(space_info(tags=["gradio"]))
+    client = TestClient(create_app(fetch_space=fetch_space))
+
+    response = client.get("/mcp/huggingface/mcp-tools/FLUX.1-Kontext-Dev/server.json")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Hugging Face Space is not tagged as an MCP server"
 
 
 def test_hf_space_agents_md_url_uses_space_agents_path() -> None:
@@ -349,8 +462,8 @@ def test_space_results_prefer_runtime_domain_for_app_and_mcp_urls() -> None:
 
     assert raw_result.data is not None
     assert raw_result.data["appUrl"] == "https://custom-runtime-domain.hf.space"
-    assert mcp_result.data is not None
-    assert mcp_result.data["url"] == "https://custom-runtime-domain.hf.space/gradio_api/mcp/"
+    assert mcp_result.url == f"{SPACES_URL_PREFIX}/mcp/huggingface/alice/mcp/server.json"
+    assert mcp_result.metadata["mcpUrl"] == "https://custom-runtime-domain.hf.space/gradio_api/mcp/"
 
 
 def test_search_hf_spaces_uses_supplied_searcher_and_limit() -> None:
@@ -408,11 +521,8 @@ def test_search_hf_spaces_adds_mcp_filter_for_mcp_results() -> None:
 
     assert searcher.filters == [["mcp-server"]]
     assert [result.type for result in results] == [MCP_SERVER_MEDIA_TYPE]
-    assert results[0].data == {
-        "name": "hf-space-alice-mcp",
-        "transport": "http",
-        "url": "https://alice-mcp.hf.space/gradio_api/mcp/",
-    }
+    assert results[0].url == f"{SPACES_URL_PREFIX}/mcp/huggingface/alice/mcp/server.json"
+    assert results[0].metadata["mcpUrl"] == "https://alice-mcp.hf.space/gradio_api/mcp/"
 
 
 def test_search_hf_spaces_returns_skill_and_mcp_for_unfiltered_search() -> None:
@@ -472,13 +582,15 @@ def test_cli_search_response_defaults_to_all_result_kinds() -> None:
     ]
 
 
-def test_cli_result_type_and_endpoint_support_inline_results() -> None:
+def test_cli_result_type_and_endpoint_support_referenced_mcp_results() -> None:
     space = Space(id="alice/mcp", tags=["mcp-server"], runtime=Runtime(stage="RUNNING"))
     mcp_result = space_to_search_result(cast("SpaceSearchResultLike", space), kind="mcp")
     space_result = space_to_search_result(cast("SpaceSearchResultLike", space), kind="space")
 
     assert cli._result_type(mcp_result) == "mcp"
-    assert cli._result_endpoint(mcp_result) == "https://alice-mcp.hf.space/gradio_api/mcp/"
+    assert cli._result_endpoint(mcp_result) == (
+        f"{SPACES_URL_PREFIX}/mcp/huggingface/alice/mcp/server.json"
+    )
     assert cli._result_type(space_result) == "space"
     assert cli._result_endpoint(space_result) == "https://alice-mcp.hf.space"
 

@@ -12,6 +12,8 @@ It exposes Hugging Face discovery as:
   Spaces: `POST /search`
 - a targeted nested Hugging Face Spaces registry: `POST /registries/huggingface/spaces/search`
 - generated skill artifacts for Spaces via `GET /skills/huggingface/{owner}/{space}/SKILL.md`
+- generated MCP Registry descriptors for MCP Spaces via
+  `GET /mcp/huggingface/{owner}/{space}/server.json`
 
 The hosted REST API combines Skills and Spaces in the primary registry so simple clients
 only need to call `POST /search`. The nested Spaces registry remains available for clients
@@ -42,10 +44,13 @@ For clients that want raw Space descriptors instead of skills, request
 nested Spaces search endpoint.
 
 Requests for `application/mcp-server+json` add `filter=mcp-server` to the downstream Hub
-search and return MCP server catalog entries that point at the Space's Gradio MCP endpoint
-using HTTP transport. When Hub runtime metadata includes a Space domain, that domain is
-used for app and MCP URLs; otherwise the adapter falls back to the standard `.hf.space`
-slug convention.
+search and return MCP server catalog entries that point at this adapter's generated
+`server.json` descriptor route. Fetching that descriptor performs a direct Hugging Face
+Space info lookup, verifies the Space is tagged `mcp-server`, and synthesizes an MCP
+Registry-style document whose `remotes[]` contains the Space's Gradio
+`streamable-http` MCP endpoint. When Hub runtime metadata includes a Space domain, that
+domain is used for app and MCP URLs; otherwise the adapter falls back to the standard
+`.hf.space` slug convention.
 
 The CLI queries the hosted hf-agentfinder deployment by default and can query any Agent
 Finder-compatible registry by passing `--registry-url`. The value may be either a registry
@@ -79,12 +84,13 @@ document. It advertises the primary Hugging Face Agent Finder registry and the n
 Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields and
 domain-anchored `urn:ai:hf.co:...` identifiers.
 
-By default, advertised registry and generated Space skill URLs are derived from the
-incoming request base URL, because those URLs point at materialized artifacts and search
-routes served by this adapter. Set `AGENTFINDER_PUBLIC_BASE_URL` only when a reverse proxy,
-staging deployment, or self-hosted runtime reports an internal base URL but clients need a
-different public prefix. Space-owned URLs such as `agents.md`, app URLs, and MCP endpoints
-continue to point at Hugging Face Space URLs derived from Hub/runtime metadata.
+By default, advertised registry, generated Space skill, and generated MCP `server.json`
+URLs are derived from the incoming request base URL, because those URLs point at
+materialized artifacts and search routes served by this adapter. Set
+`AGENTFINDER_PUBLIC_BASE_URL` only when a reverse proxy, staging deployment, or self-hosted
+runtime reports an internal base URL but clients need a different public prefix.
+Space-owned URLs such as `agents.md`, app URLs, and MCP endpoints continue to point at
+Hugging Face Space URLs derived from Hub/runtime metadata.
 
 When clients request referrals with top-level `federation` set to `referrals` or `auto`, the
 primary registry can still include a referral to the nested Hugging Face Spaces registry.
@@ -202,6 +208,7 @@ view.
 > agentfinder search "generate image" --kind skill --json
 > agentfinder search "generate image" --kind space --json
 > agentfinder search "generate image" --kind mcp --json
+> agentfinder mcp-server-json mcp-tools/FLUX.1-Kontext-Dev
 > agentfinder search --registry-url https://registry.example "generate image" --kind skill --json
 > agentfinder search "generate image" --kind space --local
 > agentfinder serve --port 8080

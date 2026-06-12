@@ -25,15 +25,19 @@ from agentfinder.hf_spaces import (
     SPACES_URL_PREFIX,
     SpaceResultKind,
     SpaceSearcher,
+    build_space_mcp_server_json,
+    is_mcp_space,
     search_hf_spaces,
+    split_space_id,
 )
 from agentfinder.models import SearchQuery, SearchRequest, SearchResponse, SearchResult
-from agentfinder.server import create_app
+from agentfinder.server import FetchSpaceInfo, create_app, fetch_space_info
 
 console = Console()
 PACKAGE_NAME = "hf-agentfinder"
 DEFAULT_REGISTRY_URL = SPACES_URL_PREFIX
 ERROR_FIELD_PREVIEW_LIMIT = 5
+HTTP_NOT_FOUND = 404
 SPEC_HELP = """Find agent-ready Hugging Face Skills, Spaces, Servers.
 
 Search the registry and output Agent Finder results as JSON or human readable tables.
@@ -84,6 +88,10 @@ VersionOpt = Annotated[
     ),
 ]
 QueryArg = Annotated[str, typer.Argument(help="Natural-language Agent Finder search query.")]
+SpaceIdArg = Annotated[
+    str,
+    typer.Argument(help="Hugging Face Space id in owner/name form, for example alice/mcp."),
+]
 FederationMode = Literal["auto", "referrals", "none"]
 LimitOpt = Annotated[int, typer.Option("--limit", "-n", min=1, max=100, help="Maximum results.")]
 SdkOpt = Annotated[
@@ -452,6 +460,50 @@ def _print_results(response: SearchResponse, *, title: str = "Search Results") -
 
 def _print_raw_json(raw_body: str) -> None:
     console.file.write(raw_body)
+    console.file.write("\n")
+
+
+def _mcp_server_json_for_space(
+    space_id: str,
+    *,
+    token: str | None = None,
+    fetch_space: FetchSpaceInfo = fetch_space_info,
+) -> dict[str, object]:
+    split_space_id(space_id)
+    try:
+        space = fetch_space(space_id, token=token)
+    except HTTPError as exc:
+        if exc.code == HTTP_NOT_FOUND:
+            raise typer.BadParameter(
+                f"Hugging Face Space not found: {space_id}",
+                param_hint="SPACE_ID",
+            ) from exc
+        raise typer.BadParameter(
+            f"failed to fetch Hugging Face Space info for {space_id}: HTTP {exc.code}",
+            param_hint="SPACE_ID",
+        ) from exc
+    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        raise typer.BadParameter(
+            f"failed to fetch Hugging Face Space info for {space_id}: {exc}",
+            param_hint="SPACE_ID",
+        ) from exc
+
+    if not is_mcp_space(space):
+        raise typer.BadParameter(
+            f"Hugging Face Space is not tagged as an MCP server: {space_id}",
+            param_hint="SPACE_ID",
+        )
+    return build_space_mcp_server_json(space)
+
+
+@app.command("mcp-server-json")
+def mcp_server_json(
+    space_id: SpaceIdArg,
+    token: TokenOpt = None,
+) -> None:
+    """Fetch Space info and print a synthesized MCP Registry server.json."""
+    payload = _mcp_server_json_for_space(space_id, token=token)
+    console.file.write(json.dumps(payload, ensure_ascii=False, indent=2))
     console.file.write("\n")
 
 
