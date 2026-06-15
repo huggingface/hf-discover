@@ -213,4 +213,4 @@ if copy_meilisearch; then
   ingest_skills
 fi
 
-exec uvx --refresh --from hf-discover discover serve --host 0.0.0.0 --port "${PORT}"
+exec uvx --refresh --from hf-discover hf-discover serve --host 0.0.0.0 --port "${PORT}"
