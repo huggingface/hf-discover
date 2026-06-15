@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
+from discover.filters import apply_entry_filters
 from discover.hf_spaces import AI_SKILL_MEDIA_TYPE, MCP_SERVER_MEDIA_TYPE
 from discover.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
 
@@ -19,7 +20,7 @@ def _base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
-def _score(entry: SearchResult, query: str, index: int) -> float:
+def _score(entry: SearchResult, query: str, index: int) -> int:
     haystack = " ".join(
         [
             entry.displayName,
@@ -30,10 +31,10 @@ def _score(entry: SearchResult, query: str, index: int) -> float:
     ).lower()
     terms = [term for term in query.lower().split() if term]
     matches = sum(1 for term in terms if term in haystack)
-    return max(1.0, entry.score + matches * 5 - index)
+    return round(min(100, max(1, entry.score + matches * 5 - index)))
 
 
-def _skill_result(base_url: str, name: str, description: str, score: float) -> SearchResult:
+def _skill_result(base_url: str, name: str, description: str, score: int) -> SearchResult:
     return SearchResult(
         identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:skill:{name}",
         displayName=name,
@@ -48,7 +49,7 @@ def _skill_result(base_url: str, name: str, description: str, score: float) -> S
     )
 
 
-def _mcp_result(base_url: str, name: str, description: str, score: float) -> SearchResult:
+def _mcp_result(base_url: str, name: str, description: str, score: int) -> SearchResult:
     return SearchResult(
         identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:mcp:{name}",
         displayName=f"{name} MCP Server",
@@ -74,7 +75,7 @@ def _mcp_result(base_url: str, name: str, description: str, score: float) -> Sea
     )
 
 
-def _a2a_result(name: str, description: str, score: float) -> SearchResult:
+def _a2a_result(name: str, description: str, score: int) -> SearchResult:
     return SearchResult(
         identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:a2a:{name}",
         displayName=f"{name} A2A Agent",
@@ -94,7 +95,7 @@ def _a2a_result(name: str, description: str, score: float) -> SearchResult:
     )
 
 
-def _catalog_result(base_url: str, score: float) -> SearchResult:
+def _catalog_result(base_url: str, score: int) -> SearchResult:
     return SearchResult(
         identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:catalog:bundle",
         displayName="Challenge Bundle Catalog",
@@ -131,7 +132,7 @@ def _registry_result(
     name: str,
     path: str,
     description: str,
-    score: float,
+    score: int,
 ) -> SearchResult:
     return SearchResult(
         identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:registry:{name}",
@@ -251,11 +252,7 @@ def _filter_results(
     results: list[SearchResult],
     request: SearchRequest,
 ) -> list[SearchResult]:
-    raw_type_filter = request.query.filter.get("type")
-    type_filter = raw_type_filter if isinstance(raw_type_filter, list) else [raw_type_filter]
-    filtered = [
-        result for result in results if raw_type_filter is None or result.type in type_filter
-    ]
+    filtered = apply_entry_filters(results, request.query.filter)
     ranked = [
         result.model_copy(update={"score": _score(result, request.query.text, index)})
         for index, result in enumerate(filtered)
@@ -414,6 +411,12 @@ def _add_search_routes(app: FastAPI) -> None:
         return _search_response(request_body, base_url=_base_url(request), results=[])
 
 
+def _add_explore_route(app: FastAPI) -> None:
+    @app.post("/explore")
+    async def explore() -> None:
+        raise HTTPException(status_code=501, detail="Explore is not implemented")
+
+
 def _add_artifact_routes(app: FastAPI) -> None:
     @app.get("/artifacts/skills/{name}/SKILL.md", response_class=PlainTextResponse)
     async def skill_artifact(name: str) -> PlainTextResponse:
@@ -443,5 +446,6 @@ def create_challenge_app() -> FastAPI:
     _add_health_routes(app)
     _add_catalog_routes(app)
     _add_search_routes(app)
+    _add_explore_route(app)
     _add_artifact_routes(app)
     return app

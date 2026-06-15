@@ -125,7 +125,7 @@ def test_registry_response_error_message_explains_missing_v5_type_field() -> Non
             {
                 "results": [
                     {
-                        "identifier": "urn:ai:example:skill",
+                        "identifier": "urn:ai:example.com:skill",
                         "displayName": "Example Skill",
                         "url": "https://example.com/SKILL.md",
                         "score": 91,
@@ -151,7 +151,7 @@ def test_registry_response_error_message_summarizes_many_missing_fields() -> Non
             {
                 "results": [
                     {
-                        "identifier": f"urn:ai:example:skill:{index}",
+                        "identifier": f"urn:ai:example.com:skill:{index}",
                         "displayName": f"Example Skill {index}",
                         "url": f"https://example.com/{index}/SKILL.md",
                         "score": 91,

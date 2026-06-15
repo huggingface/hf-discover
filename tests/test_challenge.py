@@ -53,6 +53,29 @@ def test_challenge_search_filters_by_media_type() -> None:
     assert {result["type"] for result in results} == {MCP_SERVER_MEDIA_TYPE}
 
 
+def test_challenge_search_filters_by_publisher_and_metadata_field_path() -> None:
+    client = TestClient(create_challenge_app())
+
+    response = client.post(
+        "/search",
+        json={
+            "query": {
+                "text": "tool server",
+                "filter": {
+                    "publisher": "discover.dev",
+                    "metadata.sourceType": "challenge-mcp",
+                },
+            },
+            "pageSize": 10,
+        },
+    )
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert results
+    assert {result["type"] for result in results} == {MCP_SERVER_MEDIA_TYPE}
+
+
 def test_challenge_nested_registry_refers_to_deep_registry() -> None:
     client = TestClient(create_challenge_app())
 
@@ -93,3 +116,11 @@ def test_challenge_artifact_routes_are_fetchable() -> None:
     assert mcp_response.json()["tools"][0]["name"] == "challenge_echo"
     assert catalog_response.status_code == 200
     assert catalog_response.json()["host"]["displayName"] == "ARD Challenge Registry"
+
+
+def test_challenge_explore_returns_not_implemented() -> None:
+    client = TestClient(create_challenge_app())
+
+    response = client.post("/explore", json={"query": {}, "resultType": {"facets": []}})
+
+    assert response.status_code == 501

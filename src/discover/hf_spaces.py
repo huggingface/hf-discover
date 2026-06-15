@@ -13,7 +13,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 AI_SKILL_MEDIA_TYPE = "application/ai-skill"
-MCP_SERVER_MEDIA_TYPE = "application/mcp-server+json"
+MCP_SERVER_MEDIA_TYPE = "application/mcp-server-card+json"
+LEGACY_MCP_SERVER_MEDIA_TYPE = "application/mcp-server+json"
 MCP_SERVER_SCHEMA_URL = (
     "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 )
@@ -155,10 +156,10 @@ def _space_tags(space: SpaceSearchResultLike) -> list[str]:
     return list(dict.fromkeys(tags))
 
 
-def _score(space: SpaceSearchResultLike) -> float:
+def _score(space: SpaceSearchResultLike) -> int:
     if space.semantic_relevancy_score is None:
-        return 0.0
-    return space.semantic_relevancy_score * 100
+        return 0
+    return round(min(100.0, max(0.0, space.semantic_relevancy_score * 100)))
 
 
 def _runtime_stage(space: SpaceSearchResultLike) -> str | None:

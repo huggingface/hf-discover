@@ -76,6 +76,9 @@ fastagent.jsonl
 data.ms/
 meilisearch
 
+# Private/local spec checkout used for implementation review.
+spec/ard-spec/
+
 # uv lockfile is intentionally committed.
 # uv.lock
 

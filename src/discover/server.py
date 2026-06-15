@@ -14,10 +14,12 @@ from fastapi.openapi.models import Example
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 
+from discover.filters import apply_entry_filters
 from discover.hf_skills import search_hf_skills
 from discover.hf_spaces import (
     AI_SKILL_MEDIA_TYPE,
     HF_SPACE_MEDIA_TYPE,
+    LEGACY_MCP_SERVER_MEDIA_TYPE,
     MCP_SERVER_MEDIA_TYPE,
     SPACES_URL_PREFIX,
     SpaceResultKind,
@@ -39,7 +41,6 @@ AI_REGISTRY_MEDIA_TYPE = "application/ai-registry+json"
 HF_ENDPOINT = "https://huggingface.co"
 HTTP_NOT_FOUND = 404
 PUBLIC_BASE_URL_ENV = "DISCOVER_PUBLIC_BASE_URL"
-URN_AI_PUBLISHER_PARTS = 3
 SEARCH_REQUEST_EXAMPLES: dict[str, Example] = {
     "skill": Example(
         summary="Generated AI skill results",
@@ -69,14 +70,15 @@ SEARCH_REQUEST_EXAMPLES: dict[str, Example] = {
     "mcp": Example(
         summary="MCP server discovery request",
         description=(
-            "`application/mcp-server+json` returns MCP server entries for Hugging Face Spaces "
-            "tagged `mcp-server`. The Hub search request is constrained with "
-            "`filter=mcp-server&agents=true`."
+            "`application/mcp-server-card+json` returns MCP server card entries for Hugging "
+            "Face Spaces tagged `mcp-server`. The Hub search request is constrained with "
+            "`filter=mcp-server&agents=true`. The legacy `application/mcp-server+json` filter "
+            "is accepted as a transition alias."
         ),
         value={
             "query": {
                 "text": "image generation mcp server",
-                "filter": {"type": ["application/mcp-server+json"]},
+                "filter": {"type": ["application/mcp-server-card+json"]},
             },
             "pageSize": 5,
         },
@@ -229,6 +231,7 @@ def _result_kind(artifact_type: str) -> SpaceResultKind | None:
         AI_SKILL_MEDIA_TYPE: "skill",
         HF_SPACE_MEDIA_TYPE: "space",
         MCP_SERVER_MEDIA_TYPE: "mcp",
+        LEGACY_MCP_SERVER_MEDIA_TYPE: "mcp",
     }
     return kinds.get(artifact_type)
 
@@ -264,50 +267,8 @@ def _includes_skill_index(artifact_types: list[str]) -> bool:
     return not artifact_types or AI_SKILL_MEDIA_TYPE in artifact_types
 
 
-def _publisher_from_identifier(identifier: str) -> str | None:
-    parts = identifier.split(":")
-    if len(parts) >= URN_AI_PUBLISHER_PARTS and parts[0] == "urn" and parts[1] == "ai":
-        return parts[2]
-    return None
-
-
-def _entry_values_at_path(value: Any, path: list[str]) -> list[Any]:
-    if not path:
-        return value if isinstance(value, list) else [value]
-    if isinstance(value, list):
-        return [item for child in value for item in _entry_values_at_path(child, path)]
-    if not isinstance(value, dict):
-        return []
-    current = value.get(path[0])
-    return [] if current is None else _entry_values_at_path(current, path[1:])
-
-
-def _entry_filter_values(entry: SearchResult, field: str) -> list[Any]:
-    if field == "publisher":
-        publisher = _publisher_from_identifier(entry.identifier)
-        return [] if publisher is None else [publisher]
-
-    payload = entry.model_dump(exclude_none=True)
-    return _entry_values_at_path(payload, field.split("."))
-
-
-def _matches_filter(entry: SearchResult, raw_filter: dict[str, Any]) -> bool:
-    for field, expected in raw_filter.items():
-        expected_values = expected if isinstance(expected, list) else [expected]
-        actual_values = _entry_filter_values(entry, field)
-        if not any(
-            actual == expected_value
-            for actual in actual_values
-            for expected_value in expected_values
-        ):
-            return False
-    return True
-
-
 def _apply_entry_filters(results: list[SearchResult], request: SearchRequest) -> list[SearchResult]:
-    if not request.query.filter:
-        return results
-    return [result for result in results if _matches_filter(result, request.query.filter)]
+    return apply_entry_filters(results, request.query.filter)
 
 
 def _bearer_token(value: str | None) -> str | None:
@@ -663,6 +624,12 @@ def _add_catalog_route(app: FastAPI) -> None:
         )
 
 
+def _add_explore_route(app: FastAPI) -> None:
+    @app.post("/explore")
+    async def explore() -> None:
+        raise HTTPException(status_code=501, detail="Explore is not implemented")
+
+
 def create_app(
     *,
     include_non_running: bool = False,
@@ -740,6 +707,7 @@ def create_app(
             search_spaces=search_spaces,
         )
 
+    _add_explore_route(app)
     _add_spaces_search_route(
         app,
         include_non_running=include_non_running,

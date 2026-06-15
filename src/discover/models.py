@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FederationMode = Literal["auto", "referrals", "none"]
+URN_AI_IDENTIFIER_RE = re.compile(
+    r"^urn:ai:"
+    r"(?P<publisher>(?=.{1,253}:)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
+    r"[A-Za-z]{2,63})"
+    r":[A-Za-z0-9._~!$&'()*+,;=@%-]+"
+    r"(?::[A-Za-z0-9._~!$&'()*+,;=@%-]+)*$"
+)
 
 
 class CatalogEntry(BaseModel):
@@ -26,6 +34,16 @@ class CatalogEntry(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     trustManifest: dict[str, Any] | None = None
 
+    @field_validator("identifier")
+    @classmethod
+    def validate_identifier(cls, value: str) -> str:
+        if URN_AI_IDENTIFIER_RE.fullmatch(value) is None:
+            raise ValueError(
+                "identifier must use domain-anchored ARD URN format "
+                "urn:ai:<publisher-fqdn>:<namespace-or-name>[:<agent-name>...]"
+            )
+        return value
+
     @model_validator(mode="after")
     def validate_value_or_reference(self) -> CatalogEntry:
         if (self.url is None) == (self.data is None):
@@ -44,12 +62,12 @@ class SearchQuery(BaseModel):
         default_factory=dict,
         description=(
             "Structured field-path constraints. Use `type` to constrain artifact media "
-            "types, for example `{'type': ['application/mcp-server+json']}`."
+            "types, for example `{'type': ['application/mcp-server-card+json']}`."
         ),
         examples=[
             {"type": ["application/ai-skill"]},
             {"type": ["application/vnd.huggingface.space+json"]},
-            {"type": ["application/mcp-server+json"]},
+            {"type": ["application/mcp-server-card+json"]},
         ],
     )
 
@@ -70,7 +88,7 @@ class SearchRequest(BaseModel):
 
 
 class SearchResult(CatalogEntry):
-    score: float
+    score: int = Field(ge=0, le=100)
     source: str
 
 
