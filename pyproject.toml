@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-discover = "discover.cli:app"
+hf-discover = "discover.cli:app"
 
 [dependency-groups]
 dev = [

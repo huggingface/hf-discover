@@ -46,21 +46,23 @@ def test_version_option_prints_installed_project_version() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.output == f"discover {version('hf-discover')}\n"
+    assert result.output == f"hf-discover {version('hf-discover')}\n"
 
 
 def test_version_command_prints_installed_project_version() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.output == f"discover {version('hf-discover')}\n"
+    assert result.output == f"hf-discover {version('hf-discover')}\n"
 
 
 def test_package_exposes_hf_extension_console_script() -> None:
     scripts = entry_points(group="console_scripts")
 
-    assert scripts["discover"].value == "discover.cli:app"
-    assert [script.name for script in scripts if script.value == "discover.cli:app"] == ["discover"]
+    assert scripts["hf-discover"].value == "discover.cli:app"
+    assert [script.name for script in scripts if script.value == "discover.cli:app"] == [
+        "hf-discover",
+    ]
 
 
 def test_search_commands_default_to_hosted_registry_urls() -> None:
