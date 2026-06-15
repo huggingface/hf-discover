@@ -92,12 +92,13 @@ is derived from the entry identifier's publisher domain.
 
 The primary server exposes `GET /.well-known/ai-catalog.json` as an ARD discovery
 document. It advertises the primary Hugging Face Discover registry and the nested
-Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields and
-domain-anchored `urn:ai:huggingface.co:...` identifiers.
+Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields,
+domain-anchored `urn:ai:huggingface.co:...` identifiers, and registry service base URLs. Clients
+append `/search` to those base URLs for Search requests.
 
-By default, advertised registry, generated Space skill, and generated MCP `server.json`
-URLs are derived from the incoming request base URL, because those URLs point at
-materialized artifacts and search routes served by this adapter. Set
+By default, advertised registry base URLs, generated Space skill URLs, and generated MCP
+`server.json` URLs are derived from the incoming request base URL, because those URLs
+point at services and materialized artifacts served by this adapter. Set
 `DISCOVER_PUBLIC_BASE_URL` only when a reverse proxy, staging deployment, or self-hosted
 runtime reports an internal base URL but clients need a different public prefix.
 Space-owned URLs such as `agents.md`, app URLs, and MCP endpoints continue to point at

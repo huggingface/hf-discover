@@ -948,22 +948,20 @@ def test_primary_server_exposes_v5_ai_catalog_well_known_document() -> None:
             "identifier": "urn:ai:huggingface.co:registry:discover",
             "displayName": "Hugging Face Discover Registry",
             "type": "application/ai-registry+json",
-            "url": "http://testserver/search",
+            "url": "http://testserver",
             "description": "Search indexed Hugging Face Skills and running Hugging Face Spaces.",
             "tags": ["huggingface", "registry", "search"],
-            "metadata": {"path": "/search"},
         },
         {
             "identifier": "urn:ai:huggingface.co:registry:spaces",
             "displayName": "Hugging Face Spaces Registry",
             "type": "application/ai-registry+json",
-            "url": "http://testserver/registries/huggingface/spaces/search",
+            "url": "http://testserver/registries/huggingface/spaces",
             "description": (
                 "Search generated skills, Space descriptors, and MCP entries from running "
                 "Hugging Face Spaces."
             ),
             "tags": ["huggingface", "spaces", "registry"],
-            "metadata": {"path": "/registries/huggingface/spaces/search"},
         },
     ]
 
@@ -996,8 +994,8 @@ def test_public_base_url_config_controls_advertised_registry_urls() -> None:
 
     assert catalog_response.status_code == 200
     assert [entry["url"] for entry in catalog_response.json()["entries"]] == [
-        "https://discover.example/base/search",
-        "https://discover.example/base/registries/huggingface/spaces/search",
+        "https://discover.example/base",
+        "https://discover.example/base/registries/huggingface/spaces",
     ]
 
     assert search_response.status_code == 200
@@ -1005,6 +1003,7 @@ def test_public_base_url_config_controls_advertised_registry_urls() -> None:
         search_response.json()["referrals"][0]["url"]
         == "https://discover.example/base/registries/huggingface/spaces/search"
     )
+    assert "metadata" not in search_response.json()["referrals"][0]
 
 
 def test_primary_server_explore_returns_not_implemented() -> None:

@@ -151,6 +151,10 @@ def _spaces_registry_search_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/registries/huggingface/spaces/search"
 
 
+def _spaces_registry_base_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/registries/huggingface/spaces"
+
+
 def _spaces_registry_referral(base_url: str) -> CatalogEntry:
     return CatalogEntry(
         identifier="urn:ai:huggingface.co:registry:spaces",
@@ -162,7 +166,20 @@ def _spaces_registry_referral(base_url: str) -> CatalogEntry:
             "Hugging Face Spaces."
         ),
         tags=["huggingface", "spaces", "registry"],
-        metadata={"path": "/registries/huggingface/spaces/search"},
+    )
+
+
+def _spaces_registry_catalog_entry(base_url: str) -> CatalogEntry:
+    return CatalogEntry(
+        identifier="urn:ai:huggingface.co:registry:spaces",
+        displayName="Hugging Face Spaces Registry",
+        type=AI_REGISTRY_MEDIA_TYPE,
+        url=_spaces_registry_base_url(base_url),
+        description=(
+            "Search generated skills, Space descriptors, and MCP entries from running "
+            "Hugging Face Spaces."
+        ),
+        tags=["huggingface", "spaces", "registry"],
     )
 
 
@@ -171,10 +188,9 @@ def _registry_catalog_entry(base_url: str) -> CatalogEntry:
         identifier="urn:ai:huggingface.co:registry:discover",
         displayName="Hugging Face Discover Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
-        url=f"{base_url.rstrip('/')}/search",
+        url=base_url.rstrip("/"),
         description="Search indexed Hugging Face Skills and running Hugging Face Spaces.",
         tags=["huggingface", "registry", "search"],
-        metadata={"path": "/search"},
     )
 
 
@@ -191,7 +207,7 @@ def _catalog_payload(base_url: str) -> dict[str, object]:
                 exclude_none=True,
                 exclude_defaults=True,
             ),
-            _spaces_registry_referral(base_url).model_dump(
+            _spaces_registry_catalog_entry(base_url).model_dump(
                 exclude_none=True,
                 exclude_defaults=True,
             ),
