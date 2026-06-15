@@ -1,6 +1,6 @@
 # Hugging Face Spaces Search Notes
 
-This project uses `huggingface_hub.HfApi.search_spaces()` as the first Agent Finder
+This project uses `huggingface_hub.HfApi.search_spaces()` as the first ARD
 registry backend for Hugging Face Spaces.
 
 ## Spaces semantic search
@@ -13,7 +13,7 @@ GET /api/spaces/semantic-search?q=...
 
 The SDK documents this endpoint as semantic search for multi-word queries and full-text
 search for single-word queries. It returns `SpaceSearchResult` objects with fields useful
-for Agent Finder responses:
+for ARD responses:
 
 - `id` — Space id, for example `mcp-tools/FLUX.1-Kontext-Dev`
 - `author`
@@ -29,7 +29,7 @@ for Agent Finder responses:
 - `semantic_relevancy_score` — float from `0..1`
 - `trending_score`
 
-`agentfinder` scales `semantic_relevancy_score` to a `0..100` Agent Finder `score`.
+`discover` scales `semantic_relevancy_score` to a `0..100` ARD `score`.
 
 ## MCP server detection
 
@@ -68,7 +68,7 @@ The raw semantic-search endpoint also accepts an `agents=true` query parameter:
 GET /api/spaces/semantic-search?q=...&filter=mcp-server&agents=true
 ```
 
-For Agent Finder MCP searches, prefer sending both `filter=mcp-server` and
+For ARD MCP searches, prefer sending both `filter=mcp-server` and
 `agents=true` so the Hub applies the same agent-oriented filtering used by the web
 experience. As of the current `huggingface_hub` version used by this project,
 `HfApi.search_spaces()` exposes `filter` but does not expose `agents`, so supporting this
@@ -98,12 +98,12 @@ standard `.hf.space` slug convention. `huggingface_hub.SpaceInfo` exposes `host`
 `subdomain`, but using `space_info()` for every search result would require an additional
 Hub request per result; runtime domains are available in the raw semantic-search response.
 
-The Agent Finder mapping is:
+The ARD mapping is:
 
 ```json
 {
   "mediaType": "application/mcp-server+json",
-  "url": "https://agentfinder.example/mcp/huggingface/mcp-tools/FLUX.1-Kontext-Dev/server.json"
+  "url": "https://discover.example/mcp/huggingface/mcp-tools/FLUX.1-Kontext-Dev/server.json"
 }
 ```
 
@@ -114,7 +114,7 @@ endpoint as a `streamable-http` remote. Non-MCP Spaces return an error instead o
 descriptor.
 
 MCP entries should only be generated for Spaces returned by the agent-oriented Hub search
-and tagged `mcp-server`. Unfiltered Agent Finder searches may return both the generated
+and tagged `mcp-server`. Unfiltered ARD searches may return both the generated
 `application/ai-skill` entry and the `application/mcp-server+json` entry for the same
 underlying Space.
 
@@ -146,7 +146,7 @@ When it is `False`, the SDK omits the parameter. The SDK documentation says this
 whether non-running Spaces are included and defaults to `False`. Therefore, normal searches
 should already exclude non-running Spaces at the Hub endpoint level.
 
-`agentfinder` also records the returned runtime stage in result metadata:
+`discover` also records the returned runtime stage in result metadata:
 
 ```json
 {
@@ -166,7 +166,7 @@ There are two useful filtering layers:
 2. **Client-side strict filtering** — after receiving results, drop any result whose
    `runtime.stage` is present and not `RUNNING`.
 
-The second layer is stricter and useful if we want Agent Finder to guarantee that all
+The second layer is stricter and useful if we want ARD to guarantee that all
 returned Spaces are currently ready to call:
 
 ```python

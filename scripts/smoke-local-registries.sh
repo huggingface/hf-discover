@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${AGENTFINDER_SMOKE_BASE_URL:-http://127.0.0.1:8080}"
+BASE_URL="${DISCOVER_SMOKE_BASE_URL:-http://127.0.0.1:8080}"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then

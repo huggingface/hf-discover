@@ -5,14 +5,14 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 
-from agentfinder.hf_spaces import AI_SKILL_MEDIA_TYPE, MCP_SERVER_MEDIA_TYPE
-from agentfinder.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
+from discover.hf_spaces import AI_SKILL_MEDIA_TYPE, MCP_SERVER_MEDIA_TYPE
+from discover.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
 
 A2A_AGENT_MEDIA_TYPE = "application/a2a-agent-card+json"
 AI_CATALOG_MEDIA_TYPE = "application/ai-catalog+json"
 AI_REGISTRY_MEDIA_TYPE = "application/ai-registry+json"
-CHALLENGE_SOURCE = "agentfinder:challenge"
-CHALLENGE_PUBLISHER = "agentfinder.dev"
+CHALLENGE_SOURCE = "discover:challenge"
+CHALLENGE_PUBLISHER = "discover.dev"
 
 
 def _base_url(request: Request) -> str:
@@ -303,7 +303,7 @@ def _catalog(base_url: str) -> dict[str, Any]:
     return {
         "specVersion": "1.0",
         "host": {
-            "displayName": "Agent Finder Challenge Registry",
+            "displayName": "ARD Challenge Registry",
             "documentationUrl": f"{base_url}/docs",
         },
         "entries": [
@@ -419,7 +419,7 @@ def _add_artifact_routes(app: FastAPI) -> None:
     async def skill_artifact(name: str) -> PlainTextResponse:
         body = f"""---
 name: "{name}"
-description: "Challenge fixture skill for Agent Finder client testing."
+description: "Challenge fixture skill for ARD client testing."
 ---
 
 # {name}
@@ -439,7 +439,7 @@ Use this fixture to test fetching skill artifacts from search results.
 
 
 def create_challenge_app() -> FastAPI:
-    app = FastAPI(title="Agent Finder Challenge Registry")
+    app = FastAPI(title="ARD Challenge Registry")
     _add_health_routes(app)
     _add_catalog_routes(app)
     _add_search_routes(app)

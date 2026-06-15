@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MEILI_URL="${AGENTFINDER_MEILI_URL:-http://127.0.0.1:7700}"
-MEILI_INDEX="${AGENTFINDER_MEILI_INDEX:-hf_skills}"
-MEILI_DB_PATH="${AGENTFINDER_MEILI_DB_PATH:-/home/user/app/data.ms}"
-MEILI_SOURCE_BIN="${AGENTFINDER_MEILI_BIN:-}"
-MEILI_LOCAL_BIN="${AGENTFINDER_MEILI_LOCAL_BIN:-/tmp/meilisearch}"
-MEILI_MANIFEST="${AGENTFINDER_MEILI_MANIFEST:-}"
-SKILLS_ARTIFACT_DIR="${AGENTFINDER_SKILLS_ARTIFACT_DIR:-}"
+MEILI_URL="${DISCOVER_MEILI_URL:-http://127.0.0.1:7700}"
+MEILI_INDEX="${DISCOVER_MEILI_INDEX:-hf_skills}"
+MEILI_DB_PATH="${DISCOVER_MEILI_DB_PATH:-/home/user/app/data.ms}"
+MEILI_SOURCE_BIN="${DISCOVER_MEILI_BIN:-}"
+MEILI_LOCAL_BIN="${DISCOVER_MEILI_LOCAL_BIN:-/tmp/meilisearch}"
+MEILI_MANIFEST="${DISCOVER_MEILI_MANIFEST:-}"
+SKILLS_ARTIFACT_DIR="${DISCOVER_SKILLS_ARTIFACT_DIR:-}"
 PORT="${PORT:-7860}"
 MEILI_PID=""
 export MEILI_URL MEILI_INDEX MEILI_DB_PATH MEILI_SOURCE_BIN MEILI_LOCAL_BIN MEILI_MANIFEST SKILLS_ARTIFACT_DIR
@@ -22,7 +22,7 @@ trap cleanup EXIT INT TERM
 
 copy_meilisearch() {
   if [[ -z "${MEILI_SOURCE_BIN}" ]]; then
-    echo "AGENTFINDER_MEILI_BIN is not set; starting Agent Finder without Meilisearch."
+    echo "DISCOVER_MEILI_BIN is not set; starting ARD without Meilisearch."
     return 1
   fi
   if [[ ! -f "${MEILI_SOURCE_BIN}" ]]; then
@@ -89,7 +89,7 @@ PY
 
 ingest_skills() {
   if [[ -z "${SKILLS_ARTIFACT_DIR}" ]]; then
-    echo "AGENTFINDER_SKILLS_ARTIFACT_DIR is not set; skipping skills index ingest."
+    echo "DISCOVER_SKILLS_ARTIFACT_DIR is not set; skipping skills index ingest."
     return 0
   fi
   if [[ ! -f "${SKILLS_ARTIFACT_DIR}/_SUCCESS" || ! -f "${SKILLS_ARTIFACT_DIR}/hf-skills.ndjson" ]]; then
@@ -105,9 +105,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-meili_url = os.environ.get("AGENTFINDER_MEILI_URL", "http://127.0.0.1:7700").rstrip("/")
-index = os.environ.get("AGENTFINDER_MEILI_INDEX", "hf_skills")
-artifact_dir = Path(os.environ["AGENTFINDER_SKILLS_ARTIFACT_DIR"])
+meili_url = os.environ.get("DISCOVER_MEILI_URL", "http://127.0.0.1:7700").rstrip("/")
+index = os.environ.get("DISCOVER_MEILI_INDEX", "hf_skills")
+artifact_dir = Path(os.environ["DISCOVER_SKILLS_ARTIFACT_DIR"])
 api_key = os.environ.get("MEILI_MASTER_KEY")
 
 settings = {
@@ -208,9 +208,9 @@ PY
 
 if copy_meilisearch; then
   start_meilisearch
-  export AGENTFINDER_MEILI_URL="${MEILI_URL}"
-  export AGENTFINDER_MEILI_INDEX="${MEILI_INDEX}"
+  export DISCOVER_MEILI_URL="${MEILI_URL}"
+  export DISCOVER_MEILI_INDEX="${MEILI_INDEX}"
   ingest_skills
 fi
 
-exec uvx --refresh --from hf-agentfinder agentfinder serve --host 0.0.0.0 --port "${PORT}"
+exec uvx --refresh --from hf-discover discover serve --host 0.0.0.0 --port "${PORT}"

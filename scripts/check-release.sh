@@ -73,7 +73,7 @@ with zipfile.ZipFile(wheels[0]) as wheel:
         raise SystemExit(f"{wheels[0].name} is missing wheel metadata")
     if not any(name.endswith(".dist-info/entry_points.txt") for name in names):
         raise SystemExit(f"{wheels[0].name} is missing console script entry points")
-    if "agentfinder/cli.py" not in names:
+    if "discover/cli.py" not in names:
         raise SystemExit(f"{wheels[0].name} is missing package modules")
 
 with tarfile.open(sdists[0], "r:gz") as sdist:
@@ -93,6 +93,6 @@ trap 'rm -rf "${tmpdir}"' EXIT
 echo "==> Smoke-installing wheel in a clean virtual environment"
 uv venv "${tmpdir}/venv" --python 3.14
 uv pip install --python "${tmpdir}/venv/bin/python" dist/*.whl
-"${tmpdir}/venv/bin/agentfinder" --help >/dev/null
+"${tmpdir}/venv/bin/discover" --help >/dev/null
 
 echo "==> Release artifacts are ready in dist/"

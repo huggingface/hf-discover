@@ -78,7 +78,7 @@ def main() -> None:
     if previous_version == version:
         raise SystemExit(f"pyproject.toml is already at version {version}")
 
-    print(f"Bumped hf-agentfinder from {previous_version} to {version}")
+    print(f"Bumped hf-discover from {previous_version} to {version}")
 
 
 if __name__ == "__main__":

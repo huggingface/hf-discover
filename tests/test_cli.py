@@ -9,8 +9,8 @@ from pydantic import ValidationError
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from agentfinder import cli, server
-from agentfinder.models import SearchResponse
+from discover import cli, server
+from discover.models import SearchResponse
 
 app = cli.app
 
@@ -46,21 +46,21 @@ def test_version_option_prints_installed_project_version() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.output == f"agentfinder {version('hf-agentfinder')}\n"
+    assert result.output == f"discover {version('hf-discover')}\n"
 
 
 def test_version_command_prints_installed_project_version() -> None:
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.output == f"agentfinder {version('hf-agentfinder')}\n"
+    assert result.output == f"discover {version('hf-discover')}\n"
 
 
 def test_package_exposes_hf_extension_console_script() -> None:
     scripts = entry_points(group="console_scripts")
 
-    assert scripts["agentfinder"].value == "agentfinder.cli:app"
-    assert scripts["hf-agentfinder"].value == "agentfinder.cli:app"
+    assert scripts["discover"].value == "discover.cli:app"
+    assert [script.name for script in scripts if script.value == "discover.cli:app"] == ["discover"]
 
 
 def test_search_commands_default_to_hosted_registry_urls() -> None:
@@ -137,7 +137,7 @@ def test_registry_response_error_message_explains_missing_v5_type_field() -> Non
     else:
         raise AssertionError("expected malformed SearchResponse to fail validation")
 
-    assert "not an Agent Finder v0.5 SearchResponse" in message
+    assert "not an ARD v0.5 SearchResponse" in message
     assert "results.0.type" in message
     assert "include `type` media types" in message
     assert "older pre-v0.5 schema" in message

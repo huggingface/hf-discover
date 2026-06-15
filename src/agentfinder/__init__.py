@@ -1,1 +1,0 @@
-"""Agent Finder registry adapters."""

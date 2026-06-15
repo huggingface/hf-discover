@@ -3,7 +3,7 @@
 # requires-python = ">=3.14"
 # dependencies = []
 # ///
-"""Configure the Agent Finder Space volumes and runtime variables."""
+"""Configure the ARD Space volumes and runtime variables."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from typing import Any
 import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SETTINGS = ROOT / "agentfinder.toml"
+DEFAULT_SETTINGS = ROOT / "hf-discover.toml"
 
 
 def load_settings(path: Path) -> dict[str, Any]:
@@ -115,15 +115,15 @@ def main() -> None:
             "add",
             space_id,
             "-e",
-            f"AGENTFINDER_MEILI_BIN={meili_bin}",
+            f"DISCOVER_MEILI_BIN={meili_bin}",
             "-e",
-            f"AGENTFINDER_MEILI_MANIFEST={meili_mount}/v{version}/{platform}/manifest.json",
+            f"DISCOVER_MEILI_MANIFEST={meili_mount}/v{version}/{platform}/manifest.json",
             "-e",
-            f"AGENTFINDER_SKILLS_ARTIFACT_DIR={skills_mount}/latest",
+            f"DISCOVER_SKILLS_ARTIFACT_DIR={skills_mount}/latest",
             "-e",
-            "AGENTFINDER_MEILI_URL=http://127.0.0.1:7700",
+            "DISCOVER_MEILI_URL=http://127.0.0.1:7700",
             "-e",
-            "AGENTFINDER_MEILI_INDEX=hf_skills",
+            "DISCOVER_MEILI_INDEX=hf_skills",
         ]
     )
 

@@ -14,8 +14,8 @@ from fastapi.openapi.models import Example
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 
-from agentfinder.hf_skills import search_hf_skills
-from agentfinder.hf_spaces import (
+from discover.hf_skills import search_hf_skills
+from discover.hf_spaces import (
     AI_SKILL_MEDIA_TYPE,
     HF_SPACE_MEDIA_TYPE,
     MCP_SERVER_MEDIA_TYPE,
@@ -28,7 +28,7 @@ from agentfinder.hf_spaces import (
     search_hf_spaces,
     split_space_id,
 )
-from agentfinder.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
+from discover.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -38,7 +38,7 @@ AI_CATALOG_MEDIA_TYPE = "application/ai-catalog+json"
 AI_REGISTRY_MEDIA_TYPE = "application/ai-registry+json"
 HF_ENDPOINT = "https://huggingface.co"
 HTTP_NOT_FOUND = 404
-PUBLIC_BASE_URL_ENV = "AGENTFINDER_PUBLIC_BASE_URL"
+PUBLIC_BASE_URL_ENV = "DISCOVER_PUBLIC_BASE_URL"
 URN_AI_PUBLISHER_PARTS = 3
 SEARCH_REQUEST_EXAMPLES: dict[str, Example] = {
     "skill": Example(
@@ -166,8 +166,8 @@ def _spaces_registry_referral(base_url: str) -> CatalogEntry:
 
 def _registry_catalog_entry(base_url: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier="urn:ai:hf.co:registry:agentfinder",
-        displayName="Hugging Face Agent Finder Registry",
+        identifier="urn:ai:hf.co:registry:discover",
+        displayName="Hugging Face Discover Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=f"{base_url.rstrip('/')}/search",
         description="Search indexed Hugging Face Skills and running Hugging Face Spaces.",
@@ -180,9 +180,9 @@ def _catalog_payload(base_url: str) -> dict[str, object]:
     return {
         "specVersion": "1.0",
         "host": {
-            "displayName": "Hugging Face Agent Finder",
+            "displayName": "Hugging Face Discover",
             "identifier": "hf.co",
-            "documentationUrl": "https://github.com/huggingface/hf-agentfinder",
+            "documentationUrl": "https://github.com/huggingface/hf-discover",
         },
         "entries": [
             _registry_catalog_entry(base_url).model_dump(
@@ -198,7 +198,7 @@ def _catalog_payload(base_url: str) -> dict[str, object]:
 
 
 def _skills_configured(search_skills: SearchSkills) -> bool:
-    return search_skills is not search_hf_skills or bool(os.environ.get("AGENTFINDER_MEILI_URL"))
+    return search_skills is not search_hf_skills or bool(os.environ.get("DISCOVER_MEILI_URL"))
 
 
 def _health_payload(search_skills: SearchSkills) -> dict[str, object]:
@@ -344,7 +344,7 @@ def effective_hf_token(
     return request_token or configured_token
 
 
-def search_agent_finder(
+def search_discover(
     request: SearchRequest,
     *,
     base_url: str = SPACES_URL_PREFIX,
@@ -382,7 +382,7 @@ def search_agent_finder(
     return SearchResponse(results=results[: request.pageSize], referrals=referrals)
 
 
-def search_spaces_agent_finder(
+def search_spaces_discover(
     request: SearchRequest,
     *,
     base_url: str = SPACES_URL_PREFIX,
@@ -414,7 +414,7 @@ def search_spaces_agent_finder(
 
 def fetch_agents_md(space_id: str) -> str:
     url = hf_space_agents_md_url(space_id)
-    request = UrlRequest(url, headers={"User-Agent": "agentfinder/0.1"})  # noqa: S310 - public HF URL
+    request = UrlRequest(url, headers={"User-Agent": "discover/0.1"})  # noqa: S310 - public HF URL
     with urlopen(request, timeout=30) as response:  # noqa: S310 - public HF URL
         return response.read().decode("utf-8")
 
@@ -488,7 +488,7 @@ def _space_info_from_payload(data: dict[str, object]) -> HfSpaceInfo:
 def fetch_space_info(space_id: str, *, token: bool | str | None = None) -> HfSpaceInfo:
     owner, name = split_space_id(space_id)
     url = f"{HF_ENDPOINT}/api/spaces/{quote(owner, safe='')}/{quote(name, safe='')}"
-    headers = {"User-Agent": "agentfinder/0.1"}
+    headers = {"User-Agent": "discover/0.1"}
     if isinstance(token, str):
         headers["Authorization"] = f"Bearer {token}"
     request = UrlRequest(url, headers=headers)  # noqa: S310 - public HF API endpoint
@@ -513,7 +513,7 @@ def _add_spaces_search_route(
         response_model_exclude_defaults=True,
         summary="Search Hugging Face Spaces",
         description=(
-            "Search running Hugging Face Spaces through the Agent Finder search envelope. "
+            "Search running Hugging Face Spaces through the ARD search envelope. "
             "Optional request-scoped Hugging Face tokens may be supplied with "
             "`X-HF-Authorization`, `Authorization`, or `HF_TOKEN` headers; they are used only "
             "for the downstream Spaces search request."
@@ -554,7 +554,7 @@ def _add_spaces_search_route(
         ] = None,
     ) -> SearchResponse:
         _ = x_hf_authorization, authorization, hf_token
-        return search_spaces_agent_finder(
+        return search_spaces_discover(
             request_body,
             base_url=_base_url(request),
             include_non_running=include_non_running,
@@ -652,8 +652,8 @@ def _add_catalog_route(app: FastAPI) -> None:
         response_class=JSONResponse,
         summary="AI Catalog discovery document",
         description=(
-            "Return an Agent Finder v0.5-compatible AI Catalog advertising the primary "
-            "Hugging Face Agent Finder registry and nested Spaces registry."
+            "Return an ARD v0.5-compatible AI Catalog advertising the primary "
+            "Hugging Face Discover registry and nested Spaces registry."
         ),
     )
     async def well_known_ai_catalog(request: Request) -> JSONResponse:
@@ -671,7 +671,7 @@ def create_app(
     search_spaces: SearchSpaces = search_hf_spaces,
     fetch_space: FetchSpaceInfo = fetch_space_info,
 ) -> FastAPI:
-    app = FastAPI(title="Hugging Face Agent Finder")
+    app = FastAPI(title="Hugging Face Discover")
 
     @app.get("/health")
     async def health() -> dict[str, object]:
@@ -687,7 +687,7 @@ def create_app(
         summary="Search Hugging Face Skills and Spaces",
         description=(
             "Search indexed Hugging Face Skills and running Hugging Face Spaces through one "
-            "Agent Finder search envelope. The nested Spaces registry remains available for "
+            "ARD search envelope. The nested Spaces registry remains available for "
             "clients that want targeted Spaces-only search or explicit federation traversal."
         ),
     )
@@ -728,7 +728,7 @@ def create_app(
         ] = None,
     ) -> SearchResponse:
         _ = x_hf_authorization, authorization, hf_token
-        return search_agent_finder(
+        return search_discover(
             request_body,
             base_url=_base_url(request),
             include_non_running=include_non_running,

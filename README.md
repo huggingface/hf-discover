@@ -1,14 +1,14 @@
-# hf-agentfinder
+# hf-discover
 
-A small Agent Finder registry adapter for Hugging Face Skills and Spaces.
+A small ARD registry adapter for Hugging Face Skills and Spaces.
 
 It exposes Hugging Face discovery as:
 
-- a CLI: `agentfinder search "remove background from image"`
-- version introspection: `agentfinder --version`
-- a hosted Agent Finder registry client: `agentfinder search "remove background from image"`
-- a generic Agent Finder registry client: `agentfinder search --registry-url https://registry.example "remove background from image"`
-- a primary Agent Finder REST API combining indexed Hugging Face Skills and Hugging Face
+- a CLI: `discover search "remove background from image"`
+- version introspection: `discover --version`
+- a hosted ARD registry client: `discover search "remove background from image"`
+- a generic ARD registry client: `discover search --registry-url https://registry.example "remove background from image"`
+- a primary ARD REST API combining indexed Hugging Face Skills and Hugging Face
   Spaces: `POST /search`
 - a targeted nested Hugging Face Spaces registry: `POST /registries/huggingface/spaces/search`
 - generated skill artifacts for Spaces via `GET /skills/huggingface/{owner}/{space}/SKILL.md`
@@ -23,10 +23,10 @@ that want targeted Spaces-only discovery or explicit registry traversal.
 
 ### Space Search and Skill Generation
 
-`agentfinder` exposes Hugging Face Spaces semantic search in the primary `/search` endpoint
+`discover` exposes Hugging Face Spaces semantic search in the primary `/search` endpoint
 and as a targeted nested registry backend at `/registries/huggingface/spaces/search`.
 Search requests use the Hub's agent-oriented semantic search (`agents=true`) and return
-matching Spaces as Agent Finder catalog entries. By default, results can include generated
+matching Spaces as ARD catalog entries. By default, results can include generated
 `application/ai-skill` artifacts, plus `application/mcp-server+json` entries for matching
 Spaces tagged `mcp-server`.
 
@@ -52,9 +52,9 @@ Registry-style document whose `remotes[]` contains the Space's Gradio
 domain is used for app and MCP URLs; otherwise the adapter falls back to the standard
 `.hf.space` slug convention.
 
-The CLI queries the hosted hf-agentfinder deployment by default and can query any Agent
-Finder-compatible registry by passing `--registry-url`. The value may be either a registry
-base URL or the `/search` endpoint. In this mode the CLI POSTs an Agent Finder
+The CLI queries the hosted hf-discover deployment by default and can query any
+ARD-compatible registry by passing `--registry-url`. The value may be either a registry
+base URL or the `/search` endpoint. In this mode the CLI POSTs an ARD
 `SearchRequest` and renders the returned `SearchResponse` using the same JSON/table output
 paths as the Hugging Face Spaces adapter. Pass `--local` to search directly from the
 current process instead.
@@ -75,19 +75,19 @@ single-file artifacts materialized by this adapter and continue to point at the 
 For `application/vnd.huggingface.space+json` and `application/mcp-server+json`, primary
 search routes directly to the Spaces backend because those media types are Space-specific.
 
-The registry uses the Agent Finder v0.5 search envelope: artifact type constraints are
+The registry uses the ARD v0.5 search envelope: artifact type constraints are
 expressed as `query.filter.type`, response entries use the catalog `type` field, and
 Hugging Face entries use domain-anchored `urn:ai:hf.co:...` identifiers.
 
-The primary server exposes `GET /.well-known/ai-catalog.json` as an Agent Finder discovery
-document. It advertises the primary Hugging Face Agent Finder registry and the nested
+The primary server exposes `GET /.well-known/ai-catalog.json` as an ARD discovery
+document. It advertises the primary Hugging Face Discover registry and the nested
 Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields and
 domain-anchored `urn:ai:hf.co:...` identifiers.
 
 By default, advertised registry, generated Space skill, and generated MCP `server.json`
 URLs are derived from the incoming request base URL, because those URLs point at
 materialized artifacts and search routes served by this adapter. Set
-`AGENTFINDER_PUBLIC_BASE_URL` only when a reverse proxy, staging deployment, or self-hosted
+`DISCOVER_PUBLIC_BASE_URL` only when a reverse proxy, staging deployment, or self-hosted
 runtime reports an internal base URL but clients need a different public prefix.
 Space-owned URLs such as `agents.md`, app URLs, and MCP endpoints continue to point at
 Hugging Face Space URLs derived from Hub/runtime metadata.
@@ -99,15 +99,15 @@ can use the referral for a follow-up Spaces-only search.
 
 ### Challenge Registry Server
 
-`agentfinder challenge serve` runs a deterministic local fixture registry for client
-development. It returns mixed Agent Finder result types, including skills, MCP servers, A2A
+`discover challenge serve` runs a deterministic local fixture registry for client
+development. It returns mixed ARD result types, including skills, MCP servers, A2A
 agents, ai-catalog bundles, registry entries, referrals, empty registries, and nested
 registries. Use it to test clients that need to follow registry trees and fetch referenced
 artifacts without relying on Hugging Face or Meilisearch services.
 
-`agentfinder challenge search` queries a running challenge registry and defaults to
+`discover challenge search` queries a running challenge registry and defaults to
 requesting referrals, making it a convenient CLI path for agents that need to practice
-Agent Finder traversal. The generic `agentfinder search` command defaults to the hosted
+ARD traversal. The generic `discover search` command defaults to the hosted
 deployment and also accepts `--registry-url` and `--federation none|referrals|auto`. When
 registry-backed commands are run with `--json`, the CLI prints the registry's raw
 `SearchResponse` body so clients can inspect exact `results`, `referrals`, `type`,
@@ -115,7 +115,7 @@ registry-backed commands are run with `--json`, the CLI prints the registry's ra
 
 ### Specification References
 
-`spec/agentfinder.md` remains the local Agent Finder source-of-truth. The AI Catalog draft
+`spec/ard.md` remains the local ARD source-of-truth. The AI Catalog draft
 reference can be refreshed from the upstream `Agent-Card/ai-catalog` repository with
 `./scripts/update-ai-catalog-spec.sh`, which copies the latest Markdown and JSON assets
 from its `specification/` folder into `spec/ai-catalog/`.
@@ -125,7 +125,7 @@ The vendored `spec/ai-catalog/` snapshot currently tracks the pre-merge content 
 
 ### Roadmap
 
-The next `hf-agentfinder` version is expected to expand Agent Finder v0.5 structured
+The next `hf-discover` version is expected to expand ARD v0.5 structured
 filter support. Today the HTTP server accepts `query.filter` and routes `type` filters,
 with additional exact-match field filters applied after retrieval; the CLI exposes only
 the common media-type path through `--kind`. Planned work includes a clearer CLI surface
@@ -165,15 +165,15 @@ For local preflight or manual version changes, use
 `python scripts/bump-version.py --bump patch|minor|major`, then `uv lock`, then
 `./scripts/check-release.sh`.
 
-PyPI trusted publishing must be configured for project `hf-agentfinder` with owner
-`huggingface`, repository `hf-agentfinder`, workflow `release.yml`, and environment `pypi`.
+PyPI trusted publishing must be configured for project `hf-discover` with owner
+`huggingface`, repository `hf-discover`, workflow `release.yml`, and environment `pypi`.
 The GitHub `pypi` environment does not need secrets for trusted publishing, but it must
 exist if the repository requires explicit environment configuration.
 
 ### Hugging Face Space Deployment
 
 The project includes a reproducible Docker Space definition in `deploy/huggingface-space/`.
-It uses the official uv Python image and runs the latest published `hf-agentfinder` package
+It uses the official uv Python image and runs the latest published `hf-discover` package
 with `uvx --refresh`, so restarting or rebuilding the Space resolves the newest PyPI
 release without committing generated application code to the Space repository. This keeps
 the hosted Space lightweight while letting PyPI releases drive runtime updates.
@@ -188,13 +188,13 @@ configure runtime variables without running unsupervised installer scripts in th
 
 The documentation here is intentionally an orientation record: it states the deployment
 idea and points to the artifacts that contain the operational evidence. For details, read
-`agentfinder.toml`, `scripts/vendor-meilisearch.py`,
+`hf-discover.toml`, `scripts/vendor-meilisearch.py`,
 `scripts/configure-space-runtime.py`, and
-`deploy/huggingface-space/start-agentfinder.sh`.
+`deploy/huggingface-space/start-discover.sh`.
 
 ## Usage
 
-The examples below use the standalone `agentfinder` command form.
+The examples below use the standalone `discover` command form.
 
 `--kind skill` requests AI-skill results. In the combined registry this includes indexed,
 directory-style Hugging Face Skills from Meilisearch and generated single-file Space skill
@@ -203,17 +203,17 @@ MCP server entries for Spaces tagged `mcp-server`. `--kind all` asks for the def
 view.
 
 ```bash
-> agentfinder --version
-> agentfinder search "generate image" --limit 5
-> agentfinder search "generate image" --kind skill --json
-> agentfinder search "generate image" --kind space --json
-> agentfinder search "generate image" --kind mcp --json
-> agentfinder mcp-server-json mcp-tools/FLUX.1-Kontext-Dev
-> agentfinder search --registry-url https://registry.example "generate image" --kind skill --json
-> agentfinder search "generate image" --kind space --local
-> agentfinder serve --port 8080
-> agentfinder challenge serve --port 8090
-> agentfinder challenge search "find tools and registries" --federation referrals --json
+> discover --version
+> discover search "generate image" --limit 5
+> discover search "generate image" --kind skill --json
+> discover search "generate image" --kind space --json
+> discover search "generate image" --kind mcp --json
+> discover mcp-server-json mcp-tools/FLUX.1-Kontext-Dev
+> discover search --registry-url https://registry.example "generate image" --kind skill --json
+> discover search "generate image" --kind space --local
+> discover serve --port 8080
+> discover challenge serve --port 8090
+> discover challenge search "find tools and registries" --federation referrals --json
 ```
 
 ### Recommended `hf` extension usage
@@ -221,14 +221,14 @@ view.
 For Hugging Face CLI users, the recommended install path is as an `hf` extension:
 
 ```bash
-> hf extensions install huggingface/hf-agentfinder
-> hf agentfinder --version
-> hf agentfinder search "generate image" --kind space --limit 5
+> hf extensions install huggingface/hf-discover
+> hf discover --version
+> hf discover search "generate image" --kind space --limit 5
 ```
 
-The project still documents examples as `agentfinder ...` because the same CLI is also
+The project still documents examples as `discover ...` because the same CLI is also
 available as a standalone Python console script. When installed as an extension, replace
-`agentfinder` with `hf agentfinder`.
+`discover` with `hf discover`.
 
 ```bash
 > curl -X POST http://localhost:8080/search \

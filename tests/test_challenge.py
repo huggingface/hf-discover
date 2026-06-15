@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from agentfinder.challenge import (
+from discover.challenge import (
     A2A_AGENT_MEDIA_TYPE,
     AI_CATALOG_MEDIA_TYPE,
     AI_REGISTRY_MEDIA_TYPE,
     create_challenge_app,
 )
-from agentfinder.hf_spaces import AI_SKILL_MEDIA_TYPE, MCP_SERVER_MEDIA_TYPE
+from discover.hf_spaces import AI_SKILL_MEDIA_TYPE, MCP_SERVER_MEDIA_TYPE
 
 
 def test_challenge_root_search_returns_mixed_result_types_and_referrals() -> None:
@@ -92,4 +92,4 @@ def test_challenge_artifact_routes_are_fetchable() -> None:
     assert mcp_response.status_code == 200
     assert mcp_response.json()["tools"][0]["name"] == "challenge_echo"
     assert catalog_response.status_code == 200
-    assert catalog_response.json()["host"]["displayName"] == "Agent Finder Challenge Registry"
+    assert catalog_response.json()["host"]["displayName"] == "ARD Challenge Registry"

@@ -7,6 +7,6 @@ bucket = "hf://buckets/evalstate/meilisearch-binary"
 bucket = "hf://buckets/evalstate/skills-index"
 
 [space]
-id = "evalstate/hf-agentfinder"
+id = "evalstate/hf-discover"
 meilisearch_mount = "/mnt/meilisearch"
 skills_index_mount = "/mnt/skills-index"

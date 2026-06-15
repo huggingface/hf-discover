@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 HF_ENDPOINT = "https://huggingface.co"
 SEMANTIC_SEARCH_PATH = "/api/spaces/semantic-search"
-USER_AGENT = "agentfinder/0.1"
+USER_AGENT = "discover/0.1"
 
 
 @dataclass

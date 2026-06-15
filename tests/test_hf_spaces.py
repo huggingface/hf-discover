@@ -9,15 +9,16 @@ from typing import TYPE_CHECKING, cast
 from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
+from typing_extensions import override
 
-from agentfinder import cli, server
-from agentfinder.hf_search import HfSemanticSpaceSearcher
-from agentfinder.hf_skills import search_hf_skills
+from discover import cli, server
+from discover.hf_search import HfSemanticSpaceSearcher
+from discover.hf_skills import search_hf_skills
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-from agentfinder.hf_spaces import (
+from discover.hf_spaces import (
     AI_SKILL_MEDIA_TYPE,
     HF_SPACE_MEDIA_TYPE,
     MCP_SERVER_MEDIA_TYPE,
@@ -34,13 +35,13 @@ from agentfinder.hf_spaces import (
     search_hf_spaces,
     space_to_search_result,
 )
-from agentfinder.models import SearchQuery, SearchRequest, SearchResult
-from agentfinder.server import (
+from discover.models import SearchQuery, SearchRequest, SearchResult
+from discover.server import (
     create_app,
     effective_hf_token,
     hf_token_from_headers,
-    search_agent_finder,
-    search_spaces_agent_finder,
+    search_discover,
+    search_spaces_discover,
 )
 
 SEARCH_BODY = {
@@ -91,6 +92,7 @@ class SearchHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(SEARCH_RESPONSE)
 
+    @override
     def log_message(self, format: str, *args: object) -> None:
         return
 
@@ -120,6 +122,7 @@ class RegistrySearchHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(response).encode("utf-8"))
 
+    @override
     def log_message(self, format: str, *args: object) -> None:
         return
 
@@ -160,6 +163,7 @@ class MeiliSearchHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(response).encode("utf-8"))
 
+    @override
     def log_message(self, format: str, *args: object) -> None:
         return
 
@@ -386,13 +390,13 @@ def test_hf_space_mcp_url_uses_gradio_mcp_endpoint() -> None:
     )
 
 
-def test_mcp_server_json_url_for_space_points_at_agentfinder_materializer() -> None:
+def test_mcp_server_json_url_for_space_points_at_discover_materializer() -> None:
     assert (
         mcp_server_json_url_for_space(
             "Alice/Cool.Space",
-            base_url="https://agentfinder.example",
+            base_url="https://discover.example",
         )
-        == "https://agentfinder.example/mcp/huggingface/Alice/Cool.Space/server.json"
+        == "https://discover.example/mcp/huggingface/Alice/Cool.Space/server.json"
     )
 
 
@@ -598,7 +602,7 @@ def test_cli_result_type_and_endpoint_support_referenced_mcp_results() -> None:
     assert cli._result_endpoint(space_result) == "https://alice-mcp.hf.space"
 
 
-def test_cli_registry_search_posts_agent_finder_request_to_registry_url() -> None:
+def test_cli_registry_search_posts_ard_request_to_registry_url() -> None:
     RegistryRequestRecorder.path = None
     RegistryRequestRecorder.authorization = None
     RegistryRequestRecorder.body = None
@@ -701,8 +705,8 @@ def test_hf_semantic_space_searcher_sends_agents_filter_and_token() -> None:
     assert SearchRequestRecorder.authorization == f"Bearer {configured}"
 
 
-def test_agent_finder_search_rejects_unsupported_media_type() -> None:
-    response = search_agent_finder(
+def test_discover_search_rejects_unsupported_media_type() -> None:
+    response = search_discover(
         SearchRequest(
             query=SearchQuery(
                 text="image editing",
@@ -720,7 +724,7 @@ def test_nested_spaces_registry_routes_mcp_media_type_to_mcp_results() -> None:
         [Space(id="alice/mcp", tags=["mcp-server"], runtime=Runtime(stage="RUNNING"))]
     )
 
-    response = search_spaces_agent_finder(
+    response = search_spaces_discover(
         SearchRequest(
             query=SearchQuery(text="image editing", filter={"type": [MCP_SERVER_MEDIA_TYPE]}),
             pageSize=5,
@@ -735,30 +739,30 @@ def test_nested_spaces_registry_routes_mcp_media_type_to_mcp_results() -> None:
     assert [result.type for result in response.results] == [MCP_SERVER_MEDIA_TYPE]
 
 
-def test_agent_finder_search_combines_skills_and_spaces_for_skill_requests() -> None:
+def test_discover_search_combines_skills_and_spaces_for_skill_requests() -> None:
     search_skills = RecordingSkillsSearch()
     search_spaces = RecordingSearch()
 
-    response = search_agent_finder(
+    response = search_discover(
         SearchRequest(
             query=SearchQuery(text="dataset upload", filter={"type": [AI_SKILL_MEDIA_TYPE]}),
             pageSize=3,
         ),
-        base_url="https://agentfinder.hf.space",
+        base_url="https://discover.hf.space",
         search_skills=search_skills,
         search_spaces=search_spaces,
     )
 
     assert search_skills.queries == [("dataset upload", 3)]
-    assert search_spaces.queries == [("dataset upload", 3, "skill", "https://agentfinder.hf.space")]
+    assert search_spaces.queries == [("dataset upload", 3, "skill", "https://discover.hf.space")]
     assert [result.displayName for result in response.results] == ["hf-cli", "Image Tool"]
 
 
-def test_agent_finder_search_routes_mcp_media_type_to_spaces_only() -> None:
+def test_discover_search_routes_mcp_media_type_to_spaces_only() -> None:
     search_skills = RecordingSkillsSearch()
     search_spaces = RecordingSearch()
 
-    response = search_agent_finder(
+    response = search_discover(
         SearchRequest(
             query=SearchQuery(text="tool server", filter={"type": [MCP_SERVER_MEDIA_TYPE]}),
             pageSize=3,
@@ -773,8 +777,8 @@ def test_agent_finder_search_routes_mcp_media_type_to_spaces_only() -> None:
     assert [result.type for result in response.results] == [MCP_SERVER_MEDIA_TYPE]
 
 
-def test_agent_finder_search_returns_spaces_referral_when_requested() -> None:
-    response = search_agent_finder(
+def test_discover_search_returns_spaces_referral_when_requested() -> None:
+    response = search_discover(
         SearchRequest(
             query=SearchQuery(
                 text="image editing",
@@ -783,7 +787,7 @@ def test_agent_finder_search_returns_spaces_referral_when_requested() -> None:
             federation="referrals",
             pageSize=5,
         ),
-        base_url="https://agentfinder.hf.space",
+        base_url="https://discover.hf.space",
         search_skills=lambda query, *, limit=10: [],
         search_spaces=lambda query, **kwargs: [],
     )
@@ -794,7 +798,7 @@ def test_agent_finder_search_returns_spaces_referral_when_requested() -> None:
     ]
     assert (
         response.referrals[0].url
-        == "https://agentfinder.hf.space/registries/huggingface/spaces/search"
+        == "https://discover.hf.space/registries/huggingface/spaces/search"
     )
 
 
@@ -842,8 +846,8 @@ def test_primary_server_exposes_v5_ai_catalog_well_known_document() -> None:
     assert all("mediaType" not in entry for entry in entries)
     assert entries == [
         {
-            "identifier": "urn:ai:hf.co:registry:agentfinder",
-            "displayName": "Hugging Face Agent Finder Registry",
+            "identifier": "urn:ai:hf.co:registry:discover",
+            "displayName": "Hugging Face Discover Registry",
             "type": "application/ai-registry+json",
             "url": "http://testserver/search",
             "description": "Search indexed Hugging Face Skills and running Hugging Face Spaces.",
@@ -866,8 +870,8 @@ def test_primary_server_exposes_v5_ai_catalog_well_known_document() -> None:
 
 
 def test_public_base_url_config_controls_advertised_registry_urls() -> None:
-    previous = os.environ.get("AGENTFINDER_PUBLIC_BASE_URL")
-    os.environ["AGENTFINDER_PUBLIC_BASE_URL"] = " https://agentfinder.example/base/ "
+    previous = os.environ.get("DISCOVER_PUBLIC_BASE_URL")
+    os.environ["DISCOVER_PUBLIC_BASE_URL"] = " https://discover.example/base/ "
     try:
         client = TestClient(
             create_app(
@@ -887,20 +891,20 @@ def test_public_base_url_config_controls_advertised_registry_urls() -> None:
         )
     finally:
         if previous is None:
-            os.environ.pop("AGENTFINDER_PUBLIC_BASE_URL", None)
+            os.environ.pop("DISCOVER_PUBLIC_BASE_URL", None)
         else:
-            os.environ["AGENTFINDER_PUBLIC_BASE_URL"] = previous
+            os.environ["DISCOVER_PUBLIC_BASE_URL"] = previous
 
     assert catalog_response.status_code == 200
     assert [entry["url"] for entry in catalog_response.json()["entries"]] == [
-        "https://agentfinder.example/base/search",
-        "https://agentfinder.example/base/registries/huggingface/spaces/search",
+        "https://discover.example/base/search",
+        "https://discover.example/base/registries/huggingface/spaces/search",
     ]
 
     assert search_response.status_code == 200
     assert (
         search_response.json()["referrals"][0]["url"]
-        == "https://agentfinder.example/base/registries/huggingface/spaces/search"
+        == "https://discover.example/base/registries/huggingface/spaces/search"
     )
 
 

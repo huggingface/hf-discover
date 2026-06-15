@@ -21,7 +21,7 @@ from typing import Any
 import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SETTINGS = ROOT / "agentfinder.toml"
+DEFAULT_SETTINGS = ROOT / "hf-discover.toml"
 DEFAULT_OUT = ROOT / "out" / "meilisearch"
 
 

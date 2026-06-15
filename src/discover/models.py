@@ -8,7 +8,7 @@ FederationMode = Literal["auto", "referrals", "none"]
 
 
 class CatalogEntry(BaseModel):
-    """Agent Finder catalog entry using v0.5 field names."""
+    """ARD catalog entry using v0.5 field names."""
 
     model_config = ConfigDict(extra="allow")
 

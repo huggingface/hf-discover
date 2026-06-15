@@ -14,10 +14,10 @@
 <div class="page">
   <header class="hero">
     <p class="eyebrow">Design options · skills search · generated 13 May 2026</p>
-    <h1>Adding <em>first-class skills search</em> to Agent Finder</h1>
-    <p class="lede">This document translates <code>plan/skills-search.md</code> into design and deployment choices. The target feature indexes the external <code>huggingface/skills</code> repository into Meilisearch, then exposes relevant skill results through the existing Agent Finder CLI and REST surfaces.</p>
+    <h1>Adding <em>first-class skills search</em> to ARD</h1>
+    <p class="lede">This document translates <code>plan/skills-search.md</code> into design and deployment choices. The target feature indexes the external <code>huggingface/skills</code> repository into Meilisearch, then exposes relevant skill results through the existing ARD CLI and REST surfaces.</p>
     <div class="pillrow">
-      <span class="pill">Source: huggingface/skills</span><span class="pill">Artifact: NDJSON + manifest</span><span class="pill">Index: hf_skills</span><span class="pill">Runtime: agentfinder Space</span><span class="pill">Search: Meilisearch SDK</span>
+      <span class="pill">Source: huggingface/skills</span><span class="pill">Artifact: NDJSON + manifest</span><span class="pill">Index: hf_skills</span><span class="pill">Runtime: discover Space</span><span class="pill">Search: Meilisearch SDK</span>
     </div>
   </header>
 
@@ -31,13 +31,13 @@
 
   <section id="recommendation">
     <div class="sec-head"><span class="idx">01</span><h2>Recommended production shape</h2></div>
-    <p class="sec-intro">The plan’s strongest architecture separates content building from serving. A Hugging Face Job generates portable artifacts; the Agent Finder Space consumes them and syncs Meilisearch when stale.</p>
+    <p class="sec-intro">The plan’s strongest architecture separates content building from serving. A Hugging Face Job generates portable artifacts; the ARD Space consumes them and syncs Meilisearch when stale.</p>
     <div class="flow">
       <div class="node"><span class="num">1</span><strong>huggingface/skills</strong><span class="muted">External content repository remains the source input only.</span></div>
-      <div class="node"><span class="num">2</span><strong>HF Job builds</strong><span class="muted"><code>agentfinder skills build</code> parses <code>SKILL.md</code>, chunks sections, writes artifact.</span></div>
+      <div class="node"><span class="num">2</span><strong>HF Job builds</strong><span class="muted"><code>discover skills build</code> parses <code>SKILL.md</code>, chunks sections, writes artifact.</span></div>
       <div class="node"><span class="num">3</span><strong>Bucket stores</strong><span class="muted"><code>latest/</code> and <code>commits/&lt;sha&gt;/</code> contain NDJSON, manifest, and <code>_SUCCESS</code>.</span></div>
       <div class="node"><span class="num">4</span><strong>Space syncs</strong><span class="muted">On startup or refresh, compare manifest against loaded state.</span></div>
-      <div class="node"><span class="num">5</span><strong>Meili serves</strong><span class="muted">Agent Finder queries combine or route to indexed skill results.</span></div>
+      <div class="node"><span class="num">5</span><strong>Meili serves</strong><span class="muted">ARD queries combine or route to indexed skill results.</span></div>
     </div>
     <div class="grid cols-2" style="margin-top:18px">
       <div class="panel recommend">
@@ -60,9 +60,9 @@
     <div class="grid cols-2">
       <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Use Meilisearch SDK</h3><p>Integration code should use the Python <code>meilisearch</code> package, not raw HTTP, for index configuration, load, and search.</p></div></div></div>
       <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Use NDJSON as canonical artifact</h3><p>Meilisearch dumps/snapshots can exist for operational backup, but should not be the long-lived content handoff format.</p></div></div></div>
-      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Own indexing in this repository</h3><p><code>agentfinder</code> owns schema, ingestion, Meili settings, sync, and API integration. <code>huggingface/skills</code> remains external source content.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Own indexing in this repository</h3><p><code>discover</code> owns schema, ingestion, Meili settings, sync, and API integration. <code>huggingface/skills</code> remains external source content.</p></div></div></div>
       <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Start with one document per section</h3><p>Parse each <code>SKILL.md</code>, split by Markdown headings, preserve heading ancestry, and chunk long sections with overlap.</p></div></div></div>
-      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Expose ranking score</h3><p>Search requests should ask Meili for <code>_rankingScore</code> and carry it into Agent Finder result score and/or metadata.</p></div></div></div>
+      <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Expose ranking score</h3><p>Search requests should ask Meili for <code>_rankingScore</code> and carry it into ARD result score and/or metadata.</p></div></div></div>
       <div class="panel"><div class="decision"><span class="mark">✓</span><div><h3>Preserve existing Spaces behavior</h3><p>Indexed skills are an additive backend. Existing Hugging Face Space search, MCP discovery, and generated Space skills continue to work.</p></div></div></div>
     </div>
   </section>
@@ -89,7 +89,7 @@
       <div class="panel">
         <h3>Portable artifact contract</h3>
         <p>The build step writes two required files and one completion marker. Consumers should only read a directory after <code>_SUCCESS</code> is present.</p>
-        <div class="code-panel"><div class="code-head">bucket layout</div><pre>/bucket/agentfinder/hf-skills/
+        <div class="code-panel"><div class="code-head">bucket layout</div><pre>/bucket/discover/hf-skills/
   latest/
     hf-skills.ndjson
     manifest.json
@@ -123,9 +123,9 @@
       <table>
         <thead><tr><th>Option</th><th>Description</th><th>Strengths</th><th>Risks / costs</th><th>Best use</th></tr></thead>
         <tbody>
-          <tr><td><strong>1. HF Job builds artifact; Space syncs; colocated Meili</strong></td><td>Job writes NDJSON to shared storage. Agent Finder Space starts Meilisearch locally or in the same deployment envelope and syncs on startup.</td><td>Simple operational boundary; no separate external service; artifact remains canonical.</td><td>Space startup complexity; process supervision; persistence semantics depend on Space storage; resource contention.</td><td><span class="score">Likely first hosted implementation</span></td></tr>
-          <tr><td><strong>2. HF Job builds artifact; Space syncs; external Meili</strong></td><td>Agent Finder Space connects to separately hosted Meilisearch with durable storage.</td><td>Cleaner runtime separation; better durability and scaling; easier backups.</td><td>Needs service hosting, networking, secrets, and lifecycle management outside the Space.</td><td>Production scale / shared Meili</td></tr>
-          <tr><td><strong>3. HF Job builds and loads Meili directly</strong></td><td>Job writes artifact and, if <code>MEILI_URL</code> is reachable, also runs <code>agentfinder skills load</code>.</td><td>Space startup stays fast; index is ready before serving.</td><td>Job needs network access and secrets; failure path can be split between artifact write and index load.</td><td>Good once Meili endpoint is stable</td></tr>
+          <tr><td><strong>1. HF Job builds artifact; Space syncs; colocated Meili</strong></td><td>Job writes NDJSON to shared storage. ARD Space starts Meilisearch locally or in the same deployment envelope and syncs on startup.</td><td>Simple operational boundary; no separate external service; artifact remains canonical.</td><td>Space startup complexity; process supervision; persistence semantics depend on Space storage; resource contention.</td><td><span class="score">Likely first hosted implementation</span></td></tr>
+          <tr><td><strong>2. HF Job builds artifact; Space syncs; external Meili</strong></td><td>ARD Space connects to separately hosted Meilisearch with durable storage.</td><td>Cleaner runtime separation; better durability and scaling; easier backups.</td><td>Needs service hosting, networking, secrets, and lifecycle management outside the Space.</td><td>Production scale / shared Meili</td></tr>
+          <tr><td><strong>3. HF Job builds and loads Meili directly</strong></td><td>Job writes artifact and, if <code>MEILI_URL</code> is reachable, also runs <code>discover skills load</code>.</td><td>Space startup stays fast; index is ready before serving.</td><td>Job needs network access and secrets; failure path can be split between artifact write and index load.</td><td>Good once Meili endpoint is stable</td></tr>
           <tr><td><strong>4. Space builds from GitHub on startup</strong></td><td>Space clones <code>huggingface/skills</code>, builds docs, and loads Meili during boot.</td><td>Few moving pieces; no separate artifact builder.</td><td>Slow and fragile startup; repeated work; GitHub dependency at serve time; harder to make atomic.</td><td>Local experiments only</td></tr>
           <tr><td><strong>5. GitHub Actions builds artifact</strong></td><td>A CI workflow builds NDJSON and uploads to bucket or release assets.</td><td>Familiar automation; easy logs; independent of HF Job availability.</td><td>Cross-repo triggering and credentials; less aligned with intended HF-hosted data path.</td><td>Fallback or mirror builder</td></tr>
           <tr><td><strong>6. Meili dump/snapshot as deploy artifact</strong></td><td>Build imports data into Meili, exports dump/snapshot, runtime restores it.</td><td>Potentially fast restore for same Meili version.</td><td>Version-coupled; less inspectable; explicitly rejected as source-of-truth in plan.</td><td>Operational backup only</td></tr>
@@ -135,7 +135,7 @@
   </section>
 
   <section id="api-options">
-    <div class="sec-head"><span class="idx">06</span><h2>Agent Finder API integration options</h2></div>
+    <div class="sec-head"><span class="idx">06</span><h2>ARD API integration options</h2></div>
     <p class="sec-intro">The existing <code>/search</code> endpoint already returns generated Space skills for <code>application/ai-skill</code>. Indexed repository skills need a routing or merge policy.</p>
     <div class="grid cols-3">
       <div class="panel recommend">
@@ -150,7 +150,7 @@
       </div>
       <div class="panel">
         <h3>Option C · Separate endpoint</h3>
-        <p>Add a dedicated route for skills search. This isolates behavior but weakens the single Agent Finder discovery surface.</p>
+        <p>Add a dedicated route for skills search. This isolates behavior but weakens the single ARD discovery surface.</p>
         <div class="chips"><span class="chip">debug/admin</span><span class="chip warn">less spec-aligned</span></div>
       </div>
     </div>
@@ -183,8 +183,8 @@
           <tr><td><code>skills_index/artifacts.py</code></td><td>Read/write NDJSON and <code>manifest.json</code>.</td><td>Owns schema version and completion marker behavior.</td></tr>
           <tr><td><code>skills_index/meili.py</code></td><td>Configure, load, and search Meilisearch using the SDK.</td><td>Owns searchable/displayed/filterable/sortable attributes and ranking score flags.</td></tr>
           <tr><td><code>skills_index/sync.py</code></td><td>Compare artifact manifest with loaded index state and load only when stale.</td><td>Encapsulates startup/admin refresh idempotence.</td></tr>
-          <tr><td><code>hf_skills.py</code></td><td>High-level Hugging Face skills source entrypoints.</td><td>Good place for API-facing search adapter that returns Agent Finder <code>SearchResult</code>.</td></tr>
-          <tr><td><code>cli.py</code> additions</td><td><code>agentfinder skills build/load/search/sync</code>.</td><td>CLI should call the same core modules used by HTTP/deploy paths.</td></tr>
+          <tr><td><code>hf_skills.py</code></td><td>High-level Hugging Face skills source entrypoints.</td><td>Good place for API-facing search adapter that returns ARD <code>SearchResult</code>.</td></tr>
+          <tr><td><code>cli.py</code> additions</td><td><code>discover skills build/load/search/sync</code>.</td><td>CLI should call the same core modules used by HTTP/deploy paths.</td></tr>
         </tbody>
       </table>
     </div>
@@ -209,7 +209,7 @@
           <li>Pure document-building tests over small temporary fixture directories.</li>
           <li>Manifest and NDJSON read/write roundtrip tests.</li>
           <li>CLI smoke tests for build against local fixtures.</li>
-          <li>Meilisearch integration smoke test gated by <code>AGENTFINDER_MEILI_TEST_URL</code>.</li>
+          <li>Meilisearch integration smoke test gated by <code>DISCOVER_MEILI_TEST_URL</code>.</li>
           <li>Avoid tests for type-only DTO properties that <code>ty</code> already enforces.</li>
         </ul>
       </div>
@@ -232,7 +232,7 @@
         <thead><tr><th>Question</th><th>Suggested default</th><th>Reason</th></tr></thead>
         <tbody>
           <tr><td>Merge indexed skills with Space-generated skills by default?</td><td>Not initially; require explicit source/filter.</td><td>Preserves current behavior and avoids score normalization problems.</td></tr>
-          <tr><td>Should result URLs point to GitHub blob, raw URL, or Agent Finder route?</td><td>Start with GitHub blob URL; add Agent Finder route later if clients need direct installable full skill/section documents.</td><td>Blob URLs are human-readable, stable for commits, and already in the planned schema.</td></tr>
+          <tr><td>Should result URLs point to GitHub blob, raw URL, or ARD route?</td><td>Start with GitHub blob URL; add ARD route later if clients need direct installable full skill/section documents.</td><td>Blob URLs are human-readable, stable for commits, and already in the planned schema.</td></tr>
           <tr><td>Index only <code>SKILL.md</code> or supporting files too?</td><td>Only <code>SKILL.md</code> in first production pass.</td><td>Lower schema/relevance complexity; supporting files can use reserved <code>kind=supporting_file</code> later.</td></tr>
           <tr><td>Where should Meilisearch run?</td><td>Start colocated if operationally simple; move external when durability/scale requires it.</td><td>Keeps first deployment contained while preserving artifact portability.</td></tr>
           <tr><td>Where does loaded manifest metadata live?</td><td>Sidecar file first; use Meili metadata/index document if SDK support is clean.</td><td>Sidecar is simple and avoids coupling to uncertain SDK metadata APIs.</td></tr>

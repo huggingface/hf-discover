@@ -3,8 +3,8 @@
 ## Goal
 
 Add first-class search over the [`huggingface/skills`](https://github.com/huggingface/skills)
-repository to `agentfinder`, backed by Meilisearch. `agentfinder` should own the indexing
-schema, ingestion pipeline, Meilisearch settings, and Agent Finder API integration. The
+repository to `discover`, backed by Meilisearch. `discover` should own the indexing
+schema, ingestion pipeline, Meilisearch settings, and ARD API integration. The
 `huggingface/skills` repository remains the source content repository only.
 
 The intended production shape is:
@@ -27,7 +27,7 @@ Hub-hosted artifact folder
         |
         | mounted or downloaded by
         v
-agentfinder runtime
+discover runtime
         |
         | syncs if manifest is stale
         v
@@ -39,19 +39,19 @@ part of the publishing path and is not the source of truth.
 
 ## Decisions
 
-- Use the Python `meilisearch` SDK rather than raw HTTP for Agent Finder integration.
+- Use the Python `meilisearch` SDK rather than raw HTTP for ARD integration.
 - Use a Hub-hosted artifact folder as the canonical portable publishing artifact.
-- Include both `ai-catalog.json` for direct Agent Finder catalog consumption and NDJSON for
+- Include both `ai-catalog.json` for direct ARD catalog consumption and NDJSON for
   Meilisearch indexing.
 - Generate that folder at skill publish time, or manually, then upload/sync it to Hugging Face
   storage.
 - Do not require Meilisearch during publishing.
 - Do not use Meilisearch dumps/snapshots as the source-of-truth artifact.
-- Put ingestion, artifact, sync, and search code in this `agentfinder` repo.
+- Put ingestion, artifact, sync, and search code in this `discover` repo.
 - Treat `huggingface/skills` as an external input source.
 - Start with one document per Markdown section from `SKILL.md` files.
 - Optionally support indexing supporting text files later.
-- Expose Meilisearch ranking scores in Agent Finder result metadata.
+- Expose Meilisearch ranking scores in ARD result metadata.
 
 ## Why NDJSON instead of Meilisearch dumps
 
@@ -67,7 +67,7 @@ Meilisearch dumps/snapshots can still be useful for operational backup, but they
 be the canonical ingest artifact for the skills content.
 
 `ai-catalog.json` should be generated from the same document/source pass and published in the
-same artifact folder. It is the direct Agent Finder catalog representation for clients that
+same artifact folder. It is the direct ARD catalog representation for clients that
 want all skills without semantic search.
 
 ## Dependencies
@@ -83,44 +83,44 @@ Exact version can be pinned during implementation based on current resolver outp
 ## Proposed package layout
 
 ```text
-src/agentfinder/skills_index/
+src/discover/skills_index/
   __init__.py
   documents.py      # clone/walk/parse/chunk huggingface/skills into documents
   artifacts.py      # write/read NDJSON and manifest files
   meili.py          # configure/load/search Meilisearch with the SDK
   sync.py           # compare manifest/index state and load only when stale
 
-src/agentfinder/hf_skills.py  # high-level Hugging Face skills source entrypoints
+src/discover/hf_skills.py  # high-level Hugging Face skills source entrypoints
 ```
 
 Potential CLI surface:
 
 ```bash
 # Build a syncable artifact folder.
-agentfinder skills build \
+discover skills build \
   --repo https://github.com/huggingface/skills.git \
   --out-dir out/hf-skills/latest
 
 # Optionally stage both latest/ and commits/<commit>/ for upload.
-agentfinder skills package \
+discover skills package \
   --artifact-dir out/hf-skills/latest \
   --out-dir out/hf-skills-upload
 
 # Upload the generated folder to a Hub dataset repo or other bucket-like storage.
-agentfinder skills upload \
+discover skills upload \
   --artifact-root out/hf-skills-upload \
-  --repo-id your-org/agentfinder-skills-index \
+  --repo-id your-org/discover-skills-index \
   --repo-type dataset
 
 # Populate an externally managed Meilisearch index from an artifact folder.
-agentfinder skills index build \
-  --artifact-dir /data/agentfinder/hf-skills/latest \
+discover skills index build \
+  --artifact-dir /data/discover/hf-skills/latest \
   --meili-url http://localhost:7700 \
   --meili-api-key "$MEILI_MASTER_KEY" \
   --index hf_skills
 
 # Search the populated index.
-agentfinder skills search \
+discover skills search \
   "dataset viewer SQL query" \
   --meili-url http://localhost:7700 \
   --meili-api-key "$MEILI_MASTER_KEY" \
@@ -248,7 +248,7 @@ Search requests should set:
 }
 ```
 
-Expose `_rankingScore` as the Agent Finder result score/metadata. Optionally expose
+Expose `_rankingScore` as the ARD result score/metadata. Optionally expose
 `_rankingScoreDetails` behind a debug flag.
 
 ## Artifact format
@@ -284,7 +284,7 @@ Manifest shape:
 Recommended uploaded layout:
 
 ```text
-agentfinder/hf-skills/
+discover/hf-skills/
   latest/
     ai-catalog.json
     hf-skills.ndjson
@@ -301,7 +301,7 @@ agentfinder/hf-skills/
 For a Hub dataset repo, this can simply be the repository file layout:
 
 ```text
-your-org/agentfinder-skills-index
+your-org/discover-skills-index
   latest/ai-catalog.json
   latest/hf-skills.ndjson
   latest/manifest.json
@@ -325,7 +325,7 @@ The Space should only consume artifact directories containing `_SUCCESS`.
 ## Direct catalog artifact
 
 Because the current skills catalog is small, the artifact folder should also include a direct
-Agent Finder catalog document:
+ARD catalog document:
 
 ```text
 ai-catalog.json
@@ -350,7 +350,7 @@ Example shape:
       "identifier": "urn:huggingface:skill:hf-cli",
       "displayName": "hf-cli",
       "mediaType": "application/ai-skill",
-      "url": "https://huggingface.co/datasets/your-org/agentfinder-skills-index/resolve/main/skills/hf-cli/SKILL.md",
+      "url": "https://huggingface.co/datasets/your-org/discover-skills-index/resolve/main/skills/hf-cli/SKILL.md",
       "description": "Use the Hugging Face CLI.",
       "tags": ["huggingface", "skill"],
       "metadata": {
@@ -376,7 +376,7 @@ No Meilisearch service is required for this step.
 Example local generation:
 
 ```bash
-agentfinder skills build \
+discover skills build \
   --repo https://github.com/huggingface/skills.git \
   --branch main \
   --out-dir out/hf-skills/latest
@@ -386,7 +386,7 @@ Then upload/sync that folder to Hugging Face storage. For a Hub dataset repo, th
 done with the Hugging Face CLI:
 
 ```bash
-hf upload your-org/agentfinder-skills-index \
+hf upload your-org/discover-skills-index \
   out/hf-skills/latest \
   latest \
   --repo-type dataset
@@ -399,7 +399,7 @@ from huggingface_hub import HfApi
 
 api = HfApi()
 api.upload_folder(
-    repo_id="your-org/agentfinder-skills-index",
+    repo_id="your-org/discover-skills-index",
     repo_type="dataset",
     folder_path="out/hf-skills/latest",
     path_in_repo="latest",
@@ -407,7 +407,7 @@ api.upload_folder(
 )
 ```
 
-A later convenience command may wrap this as `agentfinder skills upload`, but the first
+A later convenience command may wrap this as `discover skills upload`, but the first
 implementation can document direct `hf upload` / `HfApi.upload_folder` usage.
 
 For rollback and reproducibility, prefer uploading both `latest/` and `commits/<commit>/`.
@@ -430,7 +430,7 @@ On Space startup, local CLI sync, or an admin/manual refresh endpoint:
 For the current data size, use simple full replacement rather than incremental indexing. The
 index is small, rebuildable, and disposable.
 
-If Meilisearch is unavailable, Agent Finder should continue serving the existing Hugging Face
+If Meilisearch is unavailable, ARD should continue serving the existing Hugging Face
 Spaces search backend and report skills-index unavailability in logs/health metadata.
 
 ## Artifact retrieval options
@@ -440,7 +440,7 @@ Spaces search backend and report skills-index unavailability in logs/health meta
 Best when a Space or Job can mount the bucket/dataset output:
 
 ```bash
-AGENTFINDER_SKILLS_ARTIFACT_DIR=/data/agentfinder/hf-skills/latest
+DISCOVER_SKILLS_ARTIFACT_DIR=/data/discover/hf-skills/latest
 ```
 
 ### Hub dataset download
@@ -451,14 +451,14 @@ Best for local CLI, CI, and deployments without a mounted bucket:
 from huggingface_hub import snapshot_download
 
 artifact_root = snapshot_download(
-    repo_id="your-org/agentfinder-skills-index",
+    repo_id="your-org/discover-skills-index",
     repo_type="dataset",
     allow_patterns=["latest/*"],
 )
 artifact_dir = f"{artifact_root}/latest"
 ```
 
-## Agent Finder API integration
+## ARD API integration
 
 There are three complementary discovery surfaces:
 
@@ -509,13 +509,13 @@ Returned entry shape should include:
 }
 ```
 
-Open question: Agent Finder spec compatibility for a top-level `score` field should be
-confirmed against `spec/agentfinder.md`. If the spec does not allow top-level `score`, keep
+Open question: ARD spec compatibility for a top-level `score` field should be
+confirmed against `spec/ard.md`. If the spec does not allow top-level `score`, keep
 it in `metadata.rankingScore`.
 
 ## Meilisearch runtime model
 
-Meilisearch is optional and externally managed. `agentfinder` does not install, download,
+Meilisearch is optional and externally managed. `discover` does not install, download,
 start, stop, or supervise the Meilisearch server. It only knows how to configure an index,
 load documents from the portable artifact, and search an already reachable Meilisearch
 endpoint.
@@ -524,9 +524,9 @@ Configuration may come from CLI options or environment variables. CLI options ta
 precedence.
 
 ```bash
-AGENTFINDER_MEILI_URL=http://localhost:7700
-AGENTFINDER_MEILI_API_KEY=...
-AGENTFINDER_MEILI_INDEX=hf_skills
+DISCOVER_MEILI_URL=http://localhost:7700
+DISCOVER_MEILI_API_KEY=...
+DISCOVER_MEILI_INDEX=hf_skills
 ```
 
 Equivalent CLI options:
@@ -541,12 +541,12 @@ Users can install/run Meilisearch however they prefer: Docker, package manager, 
 managed service, or platform-provided sidecar. The project documentation can include examples,
 but the CLI should not own installation or OS/architecture detection.
 
-The main Meilisearch operation exposed by `agentfinder` should be a build/sync command that
+The main Meilisearch operation exposed by `discover` should be a build/sync command that
 populates the index from a mounted, local, or downloaded artifact folder:
 
 ```bash
-agentfinder skills index build \
-  --artifact-dir /data/agentfinder/hf-skills/latest \
+discover skills index build \
+  --artifact-dir /data/discover/hf-skills/latest \
   --meili-url http://localhost:7700 \
   --meili-api-key "$MEILI_MASTER_KEY" \
   --index hf_skills
@@ -560,13 +560,13 @@ updates.
 ### Phase 1: portable artifact pipeline
 
 - Add document parsing/chunking and artifact read/write modules.
-- Add `agentfinder skills build --out-dir ...`.
+- Add `discover skills build --out-dir ...`.
 - Write `ai-catalog.json`, `hf-skills.ndjson`, `manifest.json`, and `_SUCCESS`.
 - Document direct upload with `hf upload` and `HfApi.upload_folder`.
 
 Acceptance:
 
-- `agentfinder skills build` writes a complete syncable artifact folder containing both the
+- `discover skills build` writes a complete syncable artifact folder containing both the
   direct catalog and Meilisearch ingest documents.
 - The artifact can be uploaded to a Hub dataset repo without further transformation.
 - The manifest records source commit, schema version, document count, and artifact names.
@@ -575,15 +575,15 @@ Acceptance:
 
 - Add `meilisearch` dependency.
 - Add index configuration and full replacement load logic.
-- Add `agentfinder skills index build --artifact-dir ...` for an existing Meilisearch service.
-- Add `agentfinder skills search ...` for an existing Meilisearch service.
+- Add `discover skills index build --artifact-dir ...` for an existing Meilisearch service.
+- Add `discover skills search ...` for an existing Meilisearch service.
 - Resolve Meilisearch configuration from CLI options first, then environment variables.
 
 Acceptance:
 
-- `agentfinder skills index build` loads the artifact into an externally managed Meilisearch.
+- `discover skills index build` loads the artifact into an externally managed Meilisearch.
 - Repeated builds skip reload when manifest metadata is unchanged, unless forced.
-- `agentfinder skills search "dataset viewer SQL query"` returns scored hits when Meilisearch is configured.
+- `discover skills search "dataset viewer SQL query"` returns scored hits when Meilisearch is configured.
 - When Meilisearch is not configured, existing Spaces search remains usable.
 
 ### Phase 3: runtime retrieval
@@ -621,7 +621,7 @@ Suggested tests:
 - Pure document-building tests over small temporary fixture directories.
 - Manifest read/write roundtrip tests.
 - Meilisearch integration smoke test gated by an environment variable, e.g.
-  `AGENTFINDER_MEILI_TEST_URL`, so normal unit tests do not require a running service.
+  `DISCOVER_MEILI_TEST_URL`, so normal unit tests do not require a running service.
 - CLI smoke tests for build against local fixtures.
 - Artifact upload tests should use local folder staging and avoid live Hub calls by default;
   live Hub upload can be a manually gated smoke test.
@@ -634,7 +634,7 @@ Do not test type-only DTO properties that `ty` already covers.
   explicit source filter initially?
 - Should the default `/.well-known/ai-catalog.json` include only generated Hugging Face skills,
   or also advertise this registry and generated Space/MCP entries?
-- Should `SKILL.md` result URLs point to GitHub blob URLs, raw URLs, or an Agent Finder route
+- Should `SKILL.md` result URLs point to GitHub blob URLs, raw URLs, or an ARD route
   that can return the skill section/full skill?
 - Should we index only `SKILL.md`, or include supporting files in the first production pass?
 - Should the Space use a colocated but externally launched Meilisearch process, or connect to a separately hosted Meilisearch instance?

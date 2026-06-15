@@ -7,8 +7,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
-from agentfinder.hf_spaces import AI_SKILL_MEDIA_TYPE
-from agentfinder.models import SearchResult
+from discover.hf_spaces import AI_SKILL_MEDIA_TYPE
+from discover.models import SearchResult
 
 HF_SKILLS_SOURCE = "https://github.com/huggingface/skills"
 HF_SKILLS_PUBLISHER = "huggingface/skills"
@@ -17,7 +17,7 @@ SKILL_MARKDOWN_FILENAME = "SKILL.md"
 
 
 def _configured_meili_url(meili_url: str | None) -> str | None:
-    value = meili_url or os.environ.get("AGENTFINDER_MEILI_URL")
+    value = meili_url or os.environ.get("DISCOVER_MEILI_URL")
     if value is None:
         return None
     stripped = value.strip().rstrip("/")
@@ -163,7 +163,7 @@ def search_hf_skills(
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "agentfinder/0.1",
+        "User-Agent": "discover/0.1",
     }
     key = _meili_api_key(api_key)
     if key is not None:
@@ -175,7 +175,7 @@ def search_hf_skills(
         "showRankingScore": True,
         "showRankingScoreDetails": False,
     }
-    index_name = index or os.environ.get("AGENTFINDER_MEILI_INDEX", DEFAULT_MEILI_INDEX)
+    index_name = index or os.environ.get("DISCOVER_MEILI_INDEX", DEFAULT_MEILI_INDEX)
     request = UrlRequest(  # noqa: S310 - configured local/admin Meilisearch URL.
         f"{configured_url}/indexes/{index_name}/search",
         data=json.dumps(body).encode("utf-8"),

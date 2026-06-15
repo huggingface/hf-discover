@@ -15,9 +15,9 @@ from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
 
-from agentfinder.challenge import create_challenge_app
-from agentfinder.hf_skills import search_hf_skills
-from agentfinder.hf_spaces import (
+from discover.challenge import create_challenge_app
+from discover.hf_skills import search_hf_skills
+from discover.hf_spaces import (
     AI_SKILL_MEDIA_TYPE,
     DEFAULT_BASE_URL,
     HF_SPACE_MEDIA_TYPE,
@@ -30,39 +30,39 @@ from agentfinder.hf_spaces import (
     search_hf_spaces,
     split_space_id,
 )
-from agentfinder.models import SearchQuery, SearchRequest, SearchResponse, SearchResult
-from agentfinder.server import FetchSpaceInfo, create_app, fetch_space_info
+from discover.models import SearchQuery, SearchRequest, SearchResponse, SearchResult
+from discover.server import FetchSpaceInfo, create_app, fetch_space_info
 
 console = Console()
-PACKAGE_NAME = "hf-agentfinder"
+PACKAGE_NAME = "hf-discover"
 DEFAULT_REGISTRY_URL = SPACES_URL_PREFIX
 ERROR_FIELD_PREVIEW_LIMIT = 5
 HTTP_NOT_FOUND = 404
 SPEC_HELP = """Find agent-ready Hugging Face Skills, Spaces, Servers.
 
-Search the registry and output Agent Finder results as JSON or human readable tables.
+Search the registry and output ARD results as JSON or human readable tables.
 
 Find background removal MCP Servers:
-hf-agentfinder search "remove image background" --json --kind mcp
+discover search "remove image background" --json --kind mcp
 
 Find AI Skills or MCP Servers to train a vision model:
-hf-agentfinder search "train a vision model" --json
+discover search "train a vision model" --json
 
 Use --kind skill|space|mcp to search for a specific result view:
   skill: AI skills, including indexed Hugging Face Skills and generated Space SKILL.md wrappers
   space: raw Hugging Face Space descriptors
   mcp: MCP server entries for Spaces tagged mcp-server
-Use hf-agentfinder search --help for more information.
+Use discover search --help for more information.
 
 """
 
 app = typer.Typer(
-    help=f"Agent Finder registry adapters.\n\n{SPEC_HELP}",
+    help=f"ARD registry adapters.\n\n{SPEC_HELP}",
     # epilog=(
-    #     "Challenge quickstart: run `agentfinder challenge serve --port 8090`, then "
-    #     '`agentfinder challenge search "find tools" --federation referrals --json`. '
-    #     "Hosted registry search: `agentfinder search QUERY`. "
-    #     "Generic registry search: `agentfinder search --registry-url URL QUERY`."
+    #     "Challenge quickstart: run `discover challenge serve --port 8090`, then "
+    #     '`discover challenge search "find tools" --federation referrals --json`. '
+    #     "Hosted registry search: `discover search QUERY`. "
+    #     "Generic registry search: `discover search --registry-url URL QUERY`."
     # ),
     add_completion=False,
     invoke_without_command=True,
@@ -70,7 +70,7 @@ app = typer.Typer(
 )
 challenge_app = typer.Typer(
     help=(
-        "Run and query deterministic Agent Finder challenge fixtures.\n\n"
+        "Run and query deterministic ARD challenge fixtures.\n\n"
         "The challenge server is intentionally useful for agents learning the spec: "
         "it returns skills, MCP servers, A2A agents, inline ai-catalog bundles, "
         "ai-registry entries, referrals, empty registries, and nested registries."
@@ -83,11 +83,11 @@ VersionOpt = Annotated[
     bool,
     typer.Option(
         "--version",
-        help="Show the installed hf-agentfinder version and exit.",
+        help="Show the installed hf-discover version and exit.",
         is_eager=True,
     ),
 ]
-QueryArg = Annotated[str, typer.Argument(help="Natural-language Agent Finder search query.")]
+QueryArg = Annotated[str, typer.Argument(help="Natural-language ARD search query.")]
 SpaceIdArg = Annotated[
     str,
     typer.Argument(help="Hugging Face Space id in owner/name form, for example alice/mcp."),
@@ -123,8 +123,8 @@ RegistryUrlOpt = Annotated[
     typer.Option(
         "--registry-url",
         help=(
-            "Agent Finder registry URL to query. May be a registry base URL or its /search "
-            "endpoint. Defaults to the hosted hf-agentfinder deployment."
+            "ARD registry URL to query. May be a registry base URL or its /search "
+            "endpoint. Defaults to the hosted hf-discover deployment."
         ),
     ),
 ]
@@ -138,17 +138,17 @@ LocalOpt = Annotated[
     bool,
     typer.Option(
         "--local",
-        help="Search directly from this process instead of using an Agent Finder registry URL.",
+        help="Search directly from this process instead of using an ARD registry URL.",
     ),
 ]
-JsonOpt = Annotated[bool, typer.Option("--json", help="Emit Agent Finder JSON response.")]
+JsonOpt = Annotated[bool, typer.Option("--json", help="Emit ARD JSON response.")]
 FederationOpt = Annotated[
     FederationMode,
     typer.Option(
         "--federation",
         case_sensitive=False,
         help=(
-            "Agent Finder federation mode to send in SearchRequest: auto, referrals, or none. "
+            "ARD federation mode to send in SearchRequest: auto, referrals, or none. "
             "Use referrals to ask registries for registry referrals that a client can search next."
         ),
     ),
@@ -207,7 +207,7 @@ def _registry_response_error_message(exc: ValidationError) -> str:
         for location in missing_locations
     ):
         return (
-            "registry returned a response that is not an Agent Finder v0.5 SearchResponse: "
+            "registry returned a response that is not an ARD v0.5 SearchResponse: "
             f"missing required catalog field(s): {missing_summary}. "
             "Search results must be catalog entries and include `type` media types. "
             "This usually means the registry is still serving an older pre-v0.5 schema "
@@ -216,12 +216,12 @@ def _registry_response_error_message(exc: ValidationError) -> str:
 
     if missing_summary:
         return (
-            "registry returned a response that is not an Agent Finder v0.5 SearchResponse: "
+            "registry returned a response that is not an ARD v0.5 SearchResponse: "
             f"missing required field(s): {missing_summary}."
         )
 
     return (
-        "registry returned a response that is not an Agent Finder v0.5 SearchResponse: "
+        "registry returned a response that is not an ARD v0.5 SearchResponse: "
         f"{exc.error_count()} validation error(s)."
     )
 
@@ -234,12 +234,12 @@ def _project_version() -> str:
 
 
 def _print_version() -> None:
-    console.print(f"agentfinder {_project_version()}")
+    console.print(f"discover {_project_version()}")
 
 
 @app.callback()
 def main(version_requested: VersionOpt = False) -> None:
-    """Agent Finder registry adapters."""
+    """ARD registry adapters."""
     if version_requested:
         _print_version()
         raise typer.Exit
@@ -247,7 +247,7 @@ def main(version_requested: VersionOpt = False) -> None:
 
 @app.command("version")
 def version_command() -> None:
-    """Show the installed hf-agentfinder version."""
+    """Show the installed hf-discover version."""
     _print_version()
 
 
@@ -292,7 +292,7 @@ def _registry_search(
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "agentfinder/0.1",
+        "User-Agent": "discover/0.1",
     }
     if token is not None:
         headers["Authorization"] = f"Bearer {token}"
@@ -524,7 +524,7 @@ def search_alias(  # noqa: PLR0913 - Typer command surface intentionally maps CL
 ) -> None:
     """Search a registry (default Hugging Face).
 
-    By default, POSTs an Agent Finder SearchRequest to the hosted hf-agentfinder registry.
+    By default, POSTs an ARD SearchRequest to the hosted hf-discover registry.
     Use --registry-url for any compatible registry, or --local for in-process combined
     Skills and Spaces search. With --json, the CLI prints the registry's raw SearchResponse
     bytes instead of a normalized/re-serialized model, so reading agents can inspect exact
@@ -583,7 +583,7 @@ def challenge_search(
 ) -> None:
     """Query a running challenge server.
 
-    Defaults to the local `agentfinder challenge serve` endpoint and requests referrals.
+    Defaults to the local `discover challenge serve` endpoint and requests referrals.
     Reading agents should use --json to see the raw SearchResponse, follow referrals and
     application/ai-registry+json result URLs, fetch url artifacts, and parse inline data.
     """
@@ -607,7 +607,7 @@ def serve(
     include_non_running: IncludeNonRunningOpt = False,
     token: TokenOpt = None,
 ) -> None:
-    """Start the Agent Finder server."""
+    """Start the ARD server."""
     uvicorn.run(
         create_app(include_non_running=include_non_running, token=token),
         host=host,
@@ -620,5 +620,5 @@ def challenge_serve(
     host: Annotated[str, typer.Option("--host", help="Host to bind.")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", "-p", help="Port to bind.")] = 8090,
 ) -> None:
-    """Start Agent Finder test server with challenge fixtures."""
+    """Start ARD test server with challenge fixtures."""
     uvicorn.run(create_challenge_app(), host=host, port=port)
