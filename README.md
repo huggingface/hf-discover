@@ -80,7 +80,7 @@ Space-specific.
 
 The registry uses the ARD v0.5 search envelope: artifact type constraints are
 expressed as `query.filter.type`, response entries use the catalog `type` field, and
-Hugging Face entries use domain-anchored `urn:ai:hf.co:...` identifiers. Catalog entry
+Hugging Face entries use domain-anchored `urn:ai:huggingface.co:...` identifiers. Catalog entry
 models enforce the v0.5 strict value-or-reference rule, domain-anchored `urn:ai:<fqdn>:...`
 identifiers, and integer 0-100 relevance scores.
 
@@ -93,7 +93,7 @@ is derived from the entry identifier's publisher domain.
 The primary server exposes `GET /.well-known/ai-catalog.json` as an ARD discovery
 document. It advertises the primary Hugging Face Discover registry and the nested
 Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields and
-domain-anchored `urn:ai:hf.co:...` identifiers.
+domain-anchored `urn:ai:huggingface.co:...` identifiers.
 
 By default, advertised registry, generated Space skill, and generated MCP `server.json`
 URLs are derived from the incoming request base URL, because those URLs point at
@@ -141,8 +141,8 @@ repository with
 `./scripts/update-ai-catalog-spec.sh`, which copies the latest Markdown and JSON assets
 from its `specification/` folder into `spec/ai-catalog/`.
 
-The vendored `spec/ai-catalog/` snapshot currently tracks the pre-merge content from
-`Agent-Card/ai-catalog` PR #37, which updates catalog entries from `mediaType` to `type`.
+The vendored `spec/ai-catalog/` snapshot tracks the upstream `Agent-Card/ai-catalog`
+`specification/` folder at the commit recorded in `spec/ai-catalog/SOURCE.md`.
 
 ### Roadmap
 
