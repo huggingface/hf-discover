@@ -1,6 +1,6 @@
 [project]
 name = "hf-discover"
-version = "1.3.1"
+version = "1.3.2"
 description = "ARD registry adapter for Hugging Face Spaces"
 readme = "README.md"
 requires-python = ">=3.10.0"
