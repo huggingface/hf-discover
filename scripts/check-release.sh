@@ -93,6 +93,6 @@ trap 'rm -rf "${tmpdir}"' EXIT
 echo "==> Smoke-installing wheel in a clean virtual environment"
 uv venv "${tmpdir}/venv" --python 3.14
 uv pip install --python "${tmpdir}/venv/bin/python" dist/*.whl
-"${tmpdir}/venv/bin/discover" --help >/dev/null
+"${tmpdir}/venv/bin/hf-discover" --help >/dev/null
 
 echo "==> Release artifacts are ready in dist/"

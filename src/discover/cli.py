@@ -43,26 +43,26 @@ SPEC_HELP = """Find agent-ready Hugging Face Skills, Spaces, Servers.
 Search the registry and output ARD results as JSON or human readable tables.
 
 Find background removal MCP Servers:
-discover search "remove image background" --json --kind mcp
+hf-discover search "remove image background" --json --kind mcp
 
 Find AI Skills or MCP Servers to train a vision model:
-discover search "train a vision model" --json
+hf-discover search "train a vision model" --json
 
 Use --kind skill|space|mcp to search for a specific result view:
   skill: AI skills, including indexed Hugging Face Skills and generated Space SKILL.md wrappers
   space: raw Hugging Face Space descriptors
   mcp: MCP server entries for Spaces tagged mcp-server
-Use discover search --help for more information.
+Use hf-discover search --help for more information.
 
 """
 
 app = typer.Typer(
     help=f"ARD registry adapters.\n\n{SPEC_HELP}",
     # epilog=(
-    #     "Challenge quickstart: run `discover challenge serve --port 8090`, then "
-    #     '`discover challenge search "find tools" --federation referrals --json`. '
-    #     "Hosted registry search: `discover search QUERY`. "
-    #     "Generic registry search: `discover search --registry-url URL QUERY`."
+    #     "Challenge quickstart: run `hf-discover challenge serve --port 8090`, then "
+    #     '`hf-discover challenge search "find tools" --federation referrals --json`. '
+    #     "Hosted registry search: `hf-discover search QUERY`. "
+    #     "Generic registry search: `hf-discover search --registry-url URL QUERY`."
     # ),
     add_completion=False,
     invoke_without_command=True,
@@ -234,7 +234,7 @@ def _project_version() -> str:
 
 
 def _print_version() -> None:
-    console.print(f"discover {_project_version()}")
+    console.print(f"hf-discover {_project_version()}")
 
 
 @app.callback()
@@ -583,7 +583,7 @@ def challenge_search(
 ) -> None:
     """Query a running challenge server.
 
-    Defaults to the local `discover challenge serve` endpoint and requests referrals.
+    Defaults to the local `hf-discover challenge serve` endpoint and requests referrals.
     Reading agents should use --json to see the raw SearchResponse, follow referrals and
     application/ai-registry+json result URLs, fetch url artifacts, and parse inline data.
     """

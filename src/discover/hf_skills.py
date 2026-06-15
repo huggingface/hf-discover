@@ -44,6 +44,10 @@ def _ranking_score(hit: dict[str, Any]) -> float:
     return 0.0
 
 
+def _score_percentage(ranking_score: float) -> int:
+    return round(min(100.0, max(0.0, ranking_score * 100)))
+
+
 def _skill_key(hit: dict[str, Any]) -> str:
     return _string(hit, "skill") or _string(hit, "path") or _string(hit, "id") or "unknown"
 
@@ -133,7 +137,7 @@ def _search_result_from_hit(hit: dict[str, Any]) -> SearchResult:
         description=description,
         tags=["huggingface", "skills"],
         metadata=metadata,
-        score=ranking_score * 100,
+        score=_score_percentage(ranking_score),
         source=HF_SKILLS_SOURCE,
     )
 
