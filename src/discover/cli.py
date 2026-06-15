@@ -31,6 +31,7 @@ from discover.hf_spaces import (
     split_space_id,
 )
 from discover.models import SearchQuery, SearchRequest, SearchResponse, SearchResult
+from discover.navigation import NavigationReport, navigate
 from discover.server import FetchSpaceInfo, create_app, fetch_space_info
 
 console = Console()
@@ -142,6 +143,7 @@ LocalOpt = Annotated[
     ),
 ]
 JsonOpt = Annotated[bool, typer.Option("--json", help="Emit ARD JSON response.")]
+UrlArg = Annotated[str, typer.Argument(help="Website or ai-catalog URL to navigate.")]
 FederationOpt = Annotated[
     FederationMode,
     typer.Option(
@@ -463,6 +465,13 @@ def _print_raw_json(raw_body: str) -> None:
     console.file.write("\n")
 
 
+def _print_navigation_discovery(report: NavigationReport) -> None:
+    console.print("Discovered ARD resources")
+    for resource in report.discovered:
+        detail = f" ({resource.detail})" if resource.detail else ""
+        console.print(f"- {resource.kind} [{resource.status}] {resource.url}{detail}")
+
+
 def _mcp_server_json_for_space(
     space_id: str,
     *,
@@ -561,6 +570,59 @@ def search_alias(  # noqa: PLR0913 - Typer command surface intentionally maps CL
         _print_raw_json(raw_body)
     else:
         _print_results(response, title=title)
+
+
+@app.command("navigate")
+def navigate_command(  # noqa: PLR0913 - Typer command surface maps user-facing options.
+    url: UrlArg,
+    query: QueryArg,
+    limit: LimitOpt = 10,
+    kind: KindOpt = "all",
+    token: TokenOpt = None,
+    follow_referrals: Annotated[
+        bool,
+        typer.Option(
+            "--follow-referrals/--no-follow-referrals",
+            help="Follow registry referrals returned by discovered search endpoints.",
+        ),
+    ] = False,
+    max_depth: Annotated[
+        int,
+        typer.Option("--max-depth", min=0, max=5, help="Maximum ai-catalog recursion depth."),
+    ] = 2,
+    max_registries: Annotated[
+        int,
+        typer.Option(
+            "--max-registries", min=1, max=50, help="Maximum registry endpoints to query."
+        ),
+    ] = 10,
+    timeout: Annotated[
+        float,
+        typer.Option("--timeout", min=1.0, max=60.0, help="HTTP timeout per request in seconds."),
+    ] = 10.0,
+    json_output: JsonOpt = False,
+) -> None:
+    """Resolve a website's ai-catalog and search discovered ARD registries."""
+    try:
+        report = navigate(
+            url,
+            query,
+            limit=limit,
+            kind=kind,
+            follow_referrals=follow_referrals,
+            max_depth=max_depth,
+            max_registries=max_registries,
+            timeout=timeout,
+            token=token,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="URL") from exc
+
+    if json_output:
+        _print_raw_json(report.model_dump_json())
+    else:
+        _print_navigation_discovery(report)
+        _print_results(report.response, title="Navigated Search Results")
 
 
 @challenge_app.command("search")
