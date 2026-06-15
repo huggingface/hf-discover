@@ -41,6 +41,10 @@ def bucket_id(bucket: str) -> str:
     return bucket.removeprefix("hf://buckets/").rstrip("/")
 
 
+def should_create_bucket(bucket: str) -> bool:
+    return bucket_id(bucket) != "huggingface/skills"
+
+
 def run(command: list[str]) -> None:
     redacted = [
         "MEILI_MASTER_KEY=<redacted>" if arg.startswith("MEILI_MASTER_KEY=") else arg
@@ -75,7 +79,7 @@ def main() -> None:
     meili_bucket = args.meilisearch_bucket or nested(settings, "meilisearch", "vendor", "bucket")
     skills_bucket = args.skills_index_bucket or nested(settings, "skills_index", "bucket")
     meili_mount = nested(settings, "space", "meilisearch_mount") or "/mnt/meilisearch"
-    skills_mount = nested(settings, "space", "skills_index_mount") or "/mnt/skills-index"
+    skills_mount = nested(settings, "space", "skills_index_mount") or "/mnt/skills"
     version = (
         args.meilisearch_version or nested(settings, "meilisearch", "vendor", "version") or "1.44.0"
     )
@@ -89,7 +93,8 @@ def main() -> None:
         raise SystemExit("Missing space id or bucket setting.")
 
     run(["uvx", "hf", "buckets", "create", bucket_id(meili_bucket), "--exist-ok"])
-    run(["uvx", "hf", "buckets", "create", bucket_id(skills_bucket), "--exist-ok"])
+    if should_create_bucket(skills_bucket):
+        run(["uvx", "hf", "buckets", "create", bucket_id(skills_bucket), "--exist-ok"])
     run(
         [
             "uvx",
@@ -119,7 +124,11 @@ def main() -> None:
             "-e",
             f"DISCOVER_MEILI_MANIFEST={meili_mount}/v{version}/{platform}/manifest.json",
             "-e",
-            f"DISCOVER_SKILLS_ARTIFACT_DIR={skills_mount}/latest",
+            f"DISCOVER_SKILLS_ARTIFACT_DIR={skills_mount}/index/latest",
+            "-e",
+            f"DISCOVER_SKILLS_DISTRIBUTION_DIR={skills_mount}/distribution/latest",
+            "-e",
+            "DISCOVER_SKILLS_DISTRIBUTION_BASE_URL=https://huggingface.co/buckets/huggingface/skills/resolve/distribution%2Flatest",
             "-e",
             "DISCOVER_MEILI_URL=http://127.0.0.1:7700",
             "-e",

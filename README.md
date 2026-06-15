@@ -200,12 +200,16 @@ release without committing generated application code to the Space repository. T
 the hosted Space lightweight while letting PyPI releases drive runtime updates.
 
 The Space startup wrapper can optionally run a pinned Meilisearch binary from an attached
-Hugging Face bucket and ingest a generated Hugging Face Skills index artifact from another
-attached bucket. When Meilisearch starts successfully, the wrapper exports the configured
-Meilisearch URL and index for the API process so `POST /search` includes loaded Skills
-results alongside Spaces results. Helper scripts in `scripts/` vendor the pinned
-Meilisearch binary, create the configured buckets, attach them as Space volumes, and
-configure runtime variables without running unsupervised installer scripts in the Space.
+Hugging Face bucket and ingest the generated Hugging Face Skills search index from the
+public `hf://buckets/huggingface/skills` bucket. The same bucket also exposes
+`distribution/latest/` artifacts; indexed repo-based directory skills are returned with
+bucket-hosted `.tar.gz` URLs when the mounted distribution index is available, while their
+source GitHub URLs remain in result metadata. When Meilisearch starts successfully, the
+wrapper exports the configured Meilisearch URL and index for the API process so
+`POST /search` includes loaded Skills results alongside Spaces results. Helper scripts in
+`scripts/` vendor the pinned Meilisearch binary, create configured writable buckets,
+attach bucket volumes, and configure runtime variables without running unsupervised
+installer scripts in the Space.
 
 The documentation here is intentionally an orientation record: it states the deployment
 idea and points to the artifacts that contain the operational evidence. For details, read

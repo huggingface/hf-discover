@@ -13,7 +13,7 @@ from typing_extensions import override
 
 from discover import cli, server
 from discover.hf_search import HfSemanticSpaceSearcher
-from discover.hf_skills import _search_result_from_hit, search_hf_skills
+from discover.hf_skills import _bucket_uri_to_resolve_url, _search_result_from_hit, search_hf_skills
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -683,9 +683,51 @@ def test_hf_skills_search_queries_meili_and_groups_section_hits_by_skill() -> No
     assert len(results) == 1
     assert results[0].identifier == "urn:ai:github.com:huggingface:skills:hf-cli"
     assert results[0].url == "https://github.com/huggingface/skills/tree/main/skills/hf-cli"
+    assert results[0].metadata["sourceUrl"] == (
+        "https://github.com/huggingface/skills/tree/main/skills/hf-cli"
+    )
     assert results[0].score == 95
     assert results[0].metadata["path"] == "skills/hf-cli"
     assert results[0].metadata["title"] == "Repository uploads"
+
+
+def test_hf_skills_search_result_prefers_bucket_distribution_archive() -> None:
+    result = _search_result_from_hit(
+        {
+            "id": "gradio-hit",
+            "skill": "huggingface-gradio",
+            "skill_name": "huggingface-gradio",
+            "path": "skills/huggingface-gradio/SKILL.md",
+            "url": (
+                "https://github.com/huggingface/skills/blob/main/skills/huggingface-gradio/SKILL.md"
+            ),
+            "_rankingScore": 0.9,
+        },
+        {
+            "huggingface-gradio": {
+                "name": "huggingface-gradio",
+                "type": "archive",
+                "url": "skill://huggingface-gradio.tar.gz",
+                "digest": "sha256:test",
+            }
+        },
+    )
+
+    assert result.url == (
+        "https://huggingface.co/buckets/huggingface/skills/resolve/"
+        "distribution%2Flatest%2Fhuggingface-gradio.tar.gz"
+    )
+    assert result.metadata["sourceUrl"] == (
+        "https://github.com/huggingface/skills/tree/main/skills/huggingface-gradio"
+    )
+    assert result.metadata["agentSkillsType"] == "archive"
+    assert result.metadata["digest"] == "sha256:test"
+
+
+def test_hf_skills_search_result_normalizes_legacy_bucket_uri_base_url() -> None:
+    assert _bucket_uri_to_resolve_url("hf://buckets/huggingface/skills/distribution/latest") == (
+        "https://huggingface.co/buckets/huggingface/skills/resolve/distribution%2Flatest"
+    )
 
 
 def test_hf_skills_search_clamps_ranking_score_to_relevance_percentage() -> None:
