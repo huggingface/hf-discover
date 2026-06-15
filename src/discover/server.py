@@ -166,7 +166,6 @@ def _spaces_registry_referral(base_url: str) -> CatalogEntry:
             "Hugging Face Spaces."
         ),
         tags=["huggingface", "spaces", "registry"],
-        metadata={"path": "/registries/huggingface/spaces/search"},
     )
 
 
@@ -181,7 +180,6 @@ def _spaces_registry_catalog_entry(base_url: str) -> CatalogEntry:
             "Hugging Face Spaces."
         ),
         tags=["huggingface", "spaces", "registry"],
-        metadata={"path": "/registries/huggingface/spaces/search"},
     )
 
 
@@ -193,7 +191,6 @@ def _registry_catalog_entry(base_url: str) -> CatalogEntry:
         url=base_url.rstrip("/"),
         description="Search indexed Hugging Face Skills and running Hugging Face Spaces.",
         tags=["huggingface", "registry", "search"],
-        metadata={"path": "/search"},
     )
 
 
