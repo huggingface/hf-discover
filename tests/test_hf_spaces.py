@@ -948,7 +948,7 @@ def test_primary_server_exposes_v5_ai_catalog_well_known_document() -> None:
             "identifier": "urn:ai:hf.co:registry:discover",
             "displayName": "Hugging Face Discover Registry",
             "type": "application/ai-registry+json",
-            "url": "http://testserver/search",
+            "url": "http://testserver",
             "description": "Search indexed Hugging Face Skills and running Hugging Face Spaces.",
             "tags": ["huggingface", "registry", "search"],
             "metadata": {"path": "/search"},
@@ -957,7 +957,7 @@ def test_primary_server_exposes_v5_ai_catalog_well_known_document() -> None:
             "identifier": "urn:ai:hf.co:registry:spaces",
             "displayName": "Hugging Face Spaces Registry",
             "type": "application/ai-registry+json",
-            "url": "http://testserver/registries/huggingface/spaces/search",
+            "url": "http://testserver/registries/huggingface/spaces",
             "description": (
                 "Search generated skills, Space descriptors, and MCP entries from running "
                 "Hugging Face Spaces."
@@ -996,8 +996,8 @@ def test_public_base_url_config_controls_advertised_registry_urls() -> None:
 
     assert catalog_response.status_code == 200
     assert [entry["url"] for entry in catalog_response.json()["entries"]] == [
-        "https://discover.example/base/search",
-        "https://discover.example/base/registries/huggingface/spaces/search",
+        "https://discover.example/base",
+        "https://discover.example/base/registries/huggingface/spaces",
     ]
 
     assert search_response.status_code == 200
