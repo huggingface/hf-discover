@@ -153,7 +153,7 @@ def _spaces_registry_search_url(base_url: str) -> str:
 
 def _spaces_registry_referral(base_url: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier="urn:ai:hf.co:registry:spaces",
+        identifier="urn:ai:huggingface.co:registry:spaces",
         displayName="Hugging Face Spaces Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=_spaces_registry_search_url(base_url),
@@ -168,7 +168,7 @@ def _spaces_registry_referral(base_url: str) -> CatalogEntry:
 
 def _registry_catalog_entry(base_url: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier="urn:ai:hf.co:registry:discover",
+        identifier="urn:ai:huggingface.co:registry:discover",
         displayName="Hugging Face Discover Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=f"{base_url.rstrip('/')}/search",
@@ -183,7 +183,7 @@ def _catalog_payload(base_url: str) -> dict[str, object]:
         "specVersion": "1.0",
         "host": {
             "displayName": "Hugging Face Discover",
-            "identifier": "hf.co",
+            "identifier": "huggingface.co",
             "documentationUrl": "https://github.com/huggingface/hf-discover",
         },
         "entries": [

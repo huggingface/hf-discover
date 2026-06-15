@@ -78,6 +78,7 @@ meilisearch
 
 # Private/local spec checkout used for implementation review.
 spec/ard-spec/
+spec/ai-catalog-spec/
 
 # uv lockfile is intentionally committed.
 # uv.lock
