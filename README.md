@@ -26,23 +26,31 @@ Search our Resource catalog via:
 The Client can **search** a catalog, or **navigate** a catalog - the main difference being that
 *navigate* queries federated catalogs and combines the results.
 
-By default the Client uses the Hugging Face catalog.
+By default the Client uses the Hugging Face AI catalog.
 
 ### Search
 
-```bash
-hf discover search "<term>" --json 
-```
+Search a catalog. Use `--registry-url` to specify the catalog to search.
 
+
+```bash
+hf discover search "generate image" --limit 5
+hf discover search "train a biomedical model" --kind skill --json
+hf discover search "transcribe some audio" --kind mcp --json
+hf discover search --registry-url https://registry.example "generate image" --kind skill --json
+```
 
 ### Navigate
 
+Use navigate if you want automatic `.well-known/ai-catalog.json` discovery from a website, and to
+follow federated registries (control following and depth with `--follow-referrals` and `--max-depth` ).
+
 ```bash
-hf discover navigate <website> "
+hf discover navigate <website> "segment hockey players in an image"
+hf discover navigate https://huggingface.co "help me set up an RL environment"
 ```
 
-
-## Features
+## In Depth
 
 ### Space Search and Skill Generation
 
