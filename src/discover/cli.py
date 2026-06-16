@@ -143,7 +143,16 @@ LocalOpt = Annotated[
     ),
 ]
 JsonOpt = Annotated[bool, typer.Option("--json", help="Emit ARD JSON response.")]
-UrlArg = Annotated[str, typer.Argument(help="Website or ai-catalog URL to navigate.")]
+DEFAULT_NAVIGATE_URL = "https://huggingface.co/"
+NavigateArgs = Annotated[
+    list[str],
+    typer.Argument(
+        help=(
+            "QUERY, or URL QUERY. When URL is omitted, defaults to "
+            f"{DEFAULT_NAVIGATE_URL}."
+        )
+    ),
+]
 FederationOpt = Annotated[
     FederationMode,
     typer.Option(
@@ -237,6 +246,14 @@ def _project_version() -> str:
 
 def _print_version() -> None:
     console.print(f"hf-discover {_project_version()}")
+
+
+def parse_navigate_args(args: list[str]) -> tuple[str, str]:
+    if not args:
+        raise ValueError("provide QUERY, or URL QUERY")
+    url = args[0] if len(args) > 1 else DEFAULT_NAVIGATE_URL
+    query = " ".join(args[1:] if len(args) > 1 else args)
+    return url, query
 
 
 @app.callback()
@@ -574,8 +591,7 @@ def search_alias(  # noqa: PLR0913 - Typer command surface intentionally maps CL
 
 @app.command("navigate")
 def navigate_command(  # noqa: PLR0913 - Typer command surface maps user-facing options.
-    url: UrlArg,
-    query: QueryArg,
+    args: NavigateArgs,
     limit: LimitOpt = 10,
     kind: KindOpt = "all",
     token: TokenOpt = None,
@@ -603,6 +619,10 @@ def navigate_command(  # noqa: PLR0913 - Typer command surface maps user-facing 
     json_output: JsonOpt = False,
 ) -> None:
     """Resolve a website's ai-catalog and search discovered ARD registries."""
+    try:
+        url, query = parse_navigate_args(args)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="ARGS") from exc
     try:
         report = navigate(
             url,

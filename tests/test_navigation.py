@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 from typing_extensions import override
 
 from discover import cli
+from discover.cli import DEFAULT_NAVIGATE_URL, parse_navigate_args
 from discover.navigation import navigate, registry_search_url, well_known_catalog_url
 
 
@@ -97,6 +98,17 @@ def test_registry_search_url_accepts_base_or_search_endpoint() -> None:
     assert (
         registry_search_url("https://example.com/registry/search")
         == "https://example.com/registry/search"
+    )
+
+
+def test_parse_navigate_args_defaults_to_huggingface() -> None:
+    assert parse_navigate_args(["generate image"]) == (DEFAULT_NAVIGATE_URL, "generate image")
+
+
+def test_parse_navigate_args_accepts_explicit_url_and_multi_word_query() -> None:
+    assert parse_navigate_args(["https://example.com", "generate", "image"]) == (
+        "https://example.com",
+        "generate image",
     )
 
 
