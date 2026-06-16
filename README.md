@@ -1,23 +1,43 @@
 # hf-discover
 
-A small ARD registry adapter for Hugging Face Skills and Spaces.
+An Agent Resource Discovery (ARDs) compliant Client and Server.
 
-It exposes Hugging Face discovery as:
+The CLI can be used by you - or your agent - to search, discover and navigate any ARDs compliant registry.
 
-- a CLI: `hf-discover search "remove background from image"`
-- version introspection: `hf-discover --version`
-- a hosted ARD registry client: `hf-discover search "remove background from image"`
-- a generic ARD registry client: `hf-discover search --registry-url https://registry.example "remove background from image"`
-- a primary ARD REST API combining indexed Hugging Face Skills and Hugging Face
-  Spaces: `POST /search`
-- a targeted nested Hugging Face Spaces registry: `POST /registries/huggingface/spaces/search`
-- generated skill artifacts for Spaces via `GET /skills/huggingface/{owner}/{space}/SKILL.md`
-- generated MCP Registry descriptors for MCP Spaces via
-  `GET /mcp/huggingface/{owner}/{space}/server.json`
+Use the CLI with:
 
-The hosted REST API combines Skills and Spaces in the primary registry so simple clients
-only need to call `POST /search`. The nested Spaces registry remains available for clients
-that want targeted Spaces-only discovery or explicit registry traversal.
+```bash
+# Install HF CLI
+uv tool install -U huggingface_hub
+
+# Find skills 
+hf discover "help me train a model" --json
+```
+
+The Server provides semantic search to thousands of Skills and MCP Servers to connect to your agent.
+
+Search our ARDs catalog via: 
+
+- Rest API: https://evalstate-hf-discover.hf.space/search
+- MCP: https://evalstate-hf-discover.hf.space/mcp
+
+## Client Features
+
+T
+
+### Search
+
+```bash
+hf discover search "<term>" --json 
+```
+
+
+### Navigate
+
+```bash
+hf discover navigate <website> "
+```
+
 
 ## Features
 
@@ -126,6 +146,8 @@ primary registry can still include a referral to the nested Hugging Face Spaces 
 Simple clients can ignore referrals and use the combined results; traversal-capable clients
 can use the referral for a follow-up Spaces-only search.
 
+
+
 ### Challenge Registry Server
 
 `hf-discover challenge serve` runs a deterministic local fixture registry for client
@@ -169,8 +191,6 @@ structured filters. Today the HTTP server accepts `query.filter` and applies exa
 field-path filters after retrieval; the CLI exposes only the common media-type path
 through `--kind`. Planned work includes improved server-side handling/pushdown for common
 fields such as tags and Space SDK.
-
-It will also use "auto" federation.
 
 ### Release Automation
 
