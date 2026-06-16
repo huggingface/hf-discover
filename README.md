@@ -63,14 +63,16 @@ current process instead.
 
 ### Client-side Catalog Navigation
 
-`hf-discover navigate [URL] QUERY` is a client-only ARD discovery helper. Given a website
-URL, or `https://huggingface.co/` when URL is omitted, it fetches the site's
-`/.well-known/ai-catalog.json`, prints the catalog and registry
-URLs it discovers, follows referenced `application/ai-catalog+json` catalogs within a
-bounded depth, and POSTs the query to referenced `application/ai-registry+json` search
-endpoints. By default it queries up to 3 registries and keeps up to 3 results per
-discovered source, round-robining sources rather than treating registry scores as globally
-comparable. It can optionally follow registry referrals with `--follow-referrals`.
+`hf-discover navigate [URL] QUERY` starts from a website and discovers ARD resources from
+the client. It fetches the site's `/.well-known/ai-catalog.json`, follows linked AI
+catalogs within a small depth limit, searches referenced AI registries, and returns a
+source-balanced set of results for inspection. You can also pass an `ai-catalog.json` URL
+directly; when URL is omitted, navigation starts from `https://huggingface.co/`.
+
+By default, navigation searches up to 3 registries and keeps up to 3 results from each
+discovered source before filling the final result list. This avoids assuming that scores
+from different registries are directly comparable. It can optionally follow registry
+referrals with `--follow-referrals`.
 
 Navigation is intentionally not exposed by the hosted server, because arbitrary URL
 fetching belongs first in a user-controlled client and would need additional SSRF controls
