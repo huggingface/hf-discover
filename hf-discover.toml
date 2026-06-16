@@ -4,9 +4,9 @@ platform = "linux-amd64"
 bucket = "hf://buckets/evalstate/meilisearch-binary"
 
 [skills_index]
-bucket = "hf://buckets/evalstate/skills-index"
+bucket = "hf://buckets/huggingface/skills"
 
 [space]
 id = "evalstate/hf-discover"
 meilisearch_mount = "/mnt/meilisearch"
-skills_index_mount = "/mnt/skills-index"
+skills_index_mount = "/mnt/skills"

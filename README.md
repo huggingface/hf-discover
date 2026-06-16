@@ -92,7 +92,7 @@ Space-specific.
 
 The registry uses the ARD v0.5 search envelope: artifact type constraints are
 expressed as `query.filter.type`, response entries use the catalog `type` field, and
-Hugging Face entries use domain-anchored `urn:ai:hf.co:...` identifiers. Catalog entry
+Hugging Face entries use domain-anchored `urn:ai:huggingface.co:...` identifiers. Catalog entry
 models enforce the v0.5 strict value-or-reference rule, domain-anchored `urn:ai:<fqdn>:...`
 identifiers, and integer 0-100 relevance scores.
 
@@ -104,12 +104,13 @@ is derived from the entry identifier's publisher domain.
 
 The primary server exposes `GET /.well-known/ai-catalog.json` as an ARD discovery
 document. It advertises the primary Hugging Face Discover registry and the nested
-Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields and
-domain-anchored `urn:ai:hf.co:...` identifiers.
+Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields,
+domain-anchored `urn:ai:huggingface.co:...` identifiers, and registry service base URLs. Clients
+append `/search` to those base URLs for Search requests.
 
-By default, advertised registry, generated Space skill, and generated MCP `server.json`
-URLs are derived from the incoming request base URL, because those URLs point at
-materialized artifacts and search routes served by this adapter. Set
+By default, advertised registry base URLs, generated Space skill URLs, and generated MCP
+`server.json` URLs are derived from the incoming request base URL, because those URLs
+point at services and materialized artifacts served by this adapter. Set
 `DISCOVER_PUBLIC_BASE_URL` only when a reverse proxy, staging deployment, or self-hosted
 runtime reports an internal base URL but clients need a different public prefix.
 Space-owned URLs such as `agents.md`, app URLs, and MCP endpoints continue to point at
@@ -153,8 +154,8 @@ repository with
 `./scripts/update-ai-catalog-spec.sh`, which copies the latest Markdown and JSON assets
 from its `specification/` folder into `spec/ai-catalog/`.
 
-The vendored `spec/ai-catalog/` snapshot currently tracks the pre-merge content from
-`Agent-Card/ai-catalog` PR #37, which updates catalog entries from `mediaType` to `type`.
+The vendored `spec/ai-catalog/` snapshot tracks the upstream `Agent-Card/ai-catalog`
+`specification/` folder at the commit recorded in `spec/ai-catalog/SOURCE.md`.
 
 ### Roadmap
 
@@ -211,12 +212,16 @@ release without committing generated application code to the Space repository. T
 the hosted Space lightweight while letting PyPI releases drive runtime updates.
 
 The Space startup wrapper can optionally run a pinned Meilisearch binary from an attached
-Hugging Face bucket and ingest a generated Hugging Face Skills index artifact from another
-attached bucket. When Meilisearch starts successfully, the wrapper exports the configured
-Meilisearch URL and index for the API process so `POST /search` includes loaded Skills
-results alongside Spaces results. Helper scripts in `scripts/` vendor the pinned
-Meilisearch binary, create the configured buckets, attach them as Space volumes, and
-configure runtime variables without running unsupervised installer scripts in the Space.
+Hugging Face bucket and ingest the generated Hugging Face Skills search index from the
+public `hf://buckets/huggingface/skills` bucket. The same bucket also exposes
+`distribution/latest/` artifacts; indexed repo-based directory skills are returned with
+bucket-hosted `.tar.gz` URLs when the mounted distribution index is available, while their
+source GitHub URLs remain in result metadata. When Meilisearch starts successfully, the
+wrapper exports the configured Meilisearch URL and index for the API process so
+`POST /search` includes loaded Skills results alongside Spaces results. Helper scripts in
+`scripts/` vendor the pinned Meilisearch binary, create configured writable buckets,
+attach bucket volumes, and configure runtime variables without running unsupervised
+installer scripts in the Space.
 
 The documentation here is intentionally an orientation record: it states the deployment
 idea and points to the artifacts that contain the operational evidence. For details, read

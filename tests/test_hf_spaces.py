@@ -13,7 +13,7 @@ from typing_extensions import override
 
 from discover import cli, server
 from discover.hf_search import HfSemanticSpaceSearcher
-from discover.hf_skills import _search_result_from_hit, search_hf_skills
+from discover.hf_skills import _bucket_uri_to_resolve_url, _search_result_from_hit, search_hf_skills
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -240,7 +240,7 @@ class RecordingSearch:
         )
         return [
             SearchResult(
-                identifier="urn:ai:hf.co:skill:space:alice:image-tool",
+                identifier="urn:ai:huggingface.co:skill:space:alice:image-tool",
                 displayName="Image Tool",
                 type=media_type,
                 url=url,
@@ -327,7 +327,7 @@ def test_space_to_search_result_defaults_to_skill_wrapper() -> None:
     space = Space(id="alice/cool.space", tags=["image-to-image"], runtime=Runtime(stage="RUNNING"))
     result = space_to_search_result(cast("SpaceSearchResultLike", space))
 
-    assert result.identifier == "urn:ai:hf.co:skill:space:alice:cool.space"
+    assert result.identifier == "urn:ai:huggingface.co:skill:space:alice:cool.space"
     assert result.displayName == "Image Tool"
     assert result.type == AI_SKILL_MEDIA_TYPE
     assert result.url == (f"{SPACES_URL_PREFIX}/skills/huggingface/alice/cool.space/SKILL.md")
@@ -362,7 +362,7 @@ def test_space_to_search_result_can_return_generic_space_descriptor() -> None:
     space = Space(id="alice/cool.space")
     result = space_to_search_result(cast("SpaceSearchResultLike", space), kind="space")
 
-    assert result.identifier == "urn:ai:hf.co:space:alice:cool.space"
+    assert result.identifier == "urn:ai:huggingface.co:space:alice:cool.space"
     assert result.type == HF_SPACE_MEDIA_TYPE
     assert result.url is None
     assert result.data is not None
@@ -683,9 +683,51 @@ def test_hf_skills_search_queries_meili_and_groups_section_hits_by_skill() -> No
     assert len(results) == 1
     assert results[0].identifier == "urn:ai:github.com:huggingface:skills:hf-cli"
     assert results[0].url == "https://github.com/huggingface/skills/tree/main/skills/hf-cli"
+    assert results[0].metadata["sourceUrl"] == (
+        "https://github.com/huggingface/skills/tree/main/skills/hf-cli"
+    )
     assert results[0].score == 95
     assert results[0].metadata["path"] == "skills/hf-cli"
     assert results[0].metadata["title"] == "Repository uploads"
+
+
+def test_hf_skills_search_result_prefers_bucket_distribution_archive() -> None:
+    result = _search_result_from_hit(
+        {
+            "id": "gradio-hit",
+            "skill": "huggingface-gradio",
+            "skill_name": "huggingface-gradio",
+            "path": "skills/huggingface-gradio/SKILL.md",
+            "url": (
+                "https://github.com/huggingface/skills/blob/main/skills/huggingface-gradio/SKILL.md"
+            ),
+            "_rankingScore": 0.9,
+        },
+        {
+            "huggingface-gradio": {
+                "name": "huggingface-gradio",
+                "type": "archive",
+                "url": "skill://huggingface-gradio.tar.gz",
+                "digest": "sha256:test",
+            }
+        },
+    )
+
+    assert result.url == (
+        "https://huggingface.co/buckets/huggingface/skills/resolve/"
+        "distribution%2Flatest%2Fhuggingface-gradio.tar.gz"
+    )
+    assert result.metadata["sourceUrl"] == (
+        "https://github.com/huggingface/skills/tree/main/skills/huggingface-gradio"
+    )
+    assert result.metadata["agentSkillsType"] == "archive"
+    assert result.metadata["digest"] == "sha256:test"
+
+
+def test_hf_skills_search_result_normalizes_legacy_bucket_uri_base_url() -> None:
+    assert _bucket_uri_to_resolve_url("hf://buckets/huggingface/skills/distribution/latest") == (
+        "https://huggingface.co/buckets/huggingface/skills/resolve/distribution%2Flatest"
+    )
 
 
 def test_hf_skills_search_clamps_ranking_score_to_relevance_percentage() -> None:
@@ -837,7 +879,7 @@ def test_discover_search_applies_scalar_publisher_and_metadata_filters() -> None
                 text="tool server",
                 filter={
                     "type": MCP_SERVER_MEDIA_TYPE,
-                    "publisher": "hf.co",
+                    "publisher": "huggingface.co",
                     "metadata.sourceType": "huggingface-space",
                 },
             ),
@@ -854,7 +896,7 @@ def test_discover_search_filters_by_capability_array_values() -> None:
     def search_spaces(query: str, **kwargs: object) -> list[SearchResult]:
         return [
             SearchResult(
-                identifier="urn:ai:hf.co:mcp:space:alice:image-tool",
+                identifier="urn:ai:huggingface.co:mcp:space:alice:image-tool",
                 displayName="Image Tool",
                 type=MCP_SERVER_MEDIA_TYPE,
                 url="https://example.com/server.json",
@@ -893,7 +935,7 @@ def test_discover_search_returns_spaces_referral_when_requested() -> None:
 
     assert response.results == []
     assert [referral.identifier for referral in response.referrals] == [
-        "urn:ai:hf.co:registry:spaces"
+        "urn:ai:huggingface.co:registry:spaces"
     ]
     assert (
         response.referrals[0].url
@@ -938,32 +980,30 @@ def test_primary_server_exposes_v5_ai_catalog_well_known_document() -> None:
     assert response.headers["content-type"].startswith("application/ai-catalog+json")
     body = response.json()
     assert body["specVersion"] == "1.0"
-    assert body["host"]["identifier"] == "hf.co"
+    assert body["host"]["identifier"] == "huggingface.co"
 
     entries = body["entries"]
     assert all("type" in entry for entry in entries)
     assert all("mediaType" not in entry for entry in entries)
     assert entries == [
         {
-            "identifier": "urn:ai:hf.co:registry:discover",
+            "identifier": "urn:ai:huggingface.co:registry:discover",
             "displayName": "Hugging Face Discover Registry",
             "type": "application/ai-registry+json",
-            "url": "http://testserver/search",
+            "url": "http://testserver",
             "description": "Search indexed Hugging Face Skills and running Hugging Face Spaces.",
             "tags": ["huggingface", "registry", "search"],
-            "metadata": {"path": "/search"},
         },
         {
-            "identifier": "urn:ai:hf.co:registry:spaces",
+            "identifier": "urn:ai:huggingface.co:registry:spaces",
             "displayName": "Hugging Face Spaces Registry",
             "type": "application/ai-registry+json",
-            "url": "http://testserver/registries/huggingface/spaces/search",
+            "url": "http://testserver/registries/huggingface/spaces",
             "description": (
                 "Search generated skills, Space descriptors, and MCP entries from running "
                 "Hugging Face Spaces."
             ),
             "tags": ["huggingface", "spaces", "registry"],
-            "metadata": {"path": "/registries/huggingface/spaces/search"},
         },
     ]
 
@@ -996,8 +1036,8 @@ def test_public_base_url_config_controls_advertised_registry_urls() -> None:
 
     assert catalog_response.status_code == 200
     assert [entry["url"] for entry in catalog_response.json()["entries"]] == [
-        "https://discover.example/base/search",
-        "https://discover.example/base/registries/huggingface/spaces/search",
+        "https://discover.example/base",
+        "https://discover.example/base/registries/huggingface/spaces",
     ]
 
     assert search_response.status_code == 200
@@ -1005,6 +1045,7 @@ def test_public_base_url_config_controls_advertised_registry_urls() -> None:
         search_response.json()["referrals"][0]["url"]
         == "https://discover.example/base/registries/huggingface/spaces/search"
     )
+    assert "metadata" not in search_response.json()["referrals"][0]
 
 
 def test_primary_server_explore_returns_not_implemented() -> None:

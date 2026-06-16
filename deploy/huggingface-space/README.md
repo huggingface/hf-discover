@@ -29,12 +29,14 @@ Plain deployment sketch:
 
 1. `scripts/vendor-meilisearch.py` downloads a pinned Meilisearch release binary, writes a
    checksum/manifest next to it, and syncs that folder to the configured binary bucket.
-2. `scripts/configure-space-runtime.py` creates the configured buckets when needed, attaches
-   the Meilisearch binary bucket and skills-index bucket as Space volumes, sets runtime
-   variables, and stores `MEILI_MASTER_KEY` as a Space secret.
+2. `scripts/configure-space-runtime.py` creates configured writable buckets when needed,
+   attaches the Meilisearch binary bucket and public `huggingface/skills` bucket as Space
+   volumes, sets runtime variables, and stores `MEILI_MASTER_KEY` as a Space secret.
 3. `start-discover.sh` copies the mounted Meilisearch binary locally, verifies its
    checksum from the mounted manifest, starts Meilisearch on `127.0.0.1:7700`, loads the
-   mounted `hf-skills.ndjson` artifact into `hf_skills`, then starts the ARD API.
+   mounted `index/latest/hf-skills.ndjson` artifact into `hf_skills`, then starts the ARD
+   API. Search results use `distribution/latest/index.json` to point GitHub-repo-based
+   directory skills at their bucket-hosted `.tar.gz` artifacts.
 
 This document is an orientation record. The scripts above are the detailed evidence and
 should be read directly for exact command behavior, paths, and failure handling.
@@ -46,7 +48,11 @@ Expected runtime variables:
 - `DISCOVER_MEILI_MANIFEST`, e.g.
   `/mnt/meilisearch/v1.44.0/linux-amd64/manifest.json`
 - `DISCOVER_SKILLS_ARTIFACT_DIR`, e.g.
-  `/mnt/skills-index/latest`
+  `/mnt/skills/index/latest`
+- `DISCOVER_SKILLS_DISTRIBUTION_DIR`, e.g.
+  `/mnt/skills/distribution/latest`
+- `DISCOVER_SKILLS_DISTRIBUTION_BASE_URL`, defaulting to
+  `https://huggingface.co/buckets/huggingface/skills/resolve/distribution%2Flatest`
 - `DISCOVER_MEILI_URL`, default `http://127.0.0.1:7700`
 - `DISCOVER_MEILI_INDEX`, default `hf_skills`
 - `DISCOVER_PUBLIC_BASE_URL`, optional canonical public URL used in discovery
