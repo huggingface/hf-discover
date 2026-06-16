@@ -68,7 +68,9 @@ URL, or `https://huggingface.co/` when URL is omitted, it fetches the site's
 `/.well-known/ai-catalog.json`, prints the catalog and registry
 URLs it discovers, follows referenced `application/ai-catalog+json` catalogs within a
 bounded depth, and POSTs the query to referenced `application/ai-registry+json` search
-endpoints. It can optionally follow registry referrals with `--follow-referrals`.
+endpoints. By default it queries up to 3 registries and keeps up to 3 results per
+discovered source, round-robining sources rather than treating registry scores as globally
+comparable. It can optionally follow registry referrals with `--follow-referrals`.
 
 Navigation is intentionally not exposed by the hosted server, because arbitrary URL
 fetching belongs first in a user-controlled client and would need additional SSRF controls

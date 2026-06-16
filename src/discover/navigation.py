@@ -139,13 +139,47 @@ def _static_result(entry: CatalogEntry, *, query: str, source: str) -> SearchRes
     )
 
 
-def _merge_results(results: list[SearchResult], *, limit: int) -> list[SearchResult]:
+def _with_source(result: SearchResult, source: str) -> SearchResult:
+    return result.model_copy(update={"source": source})
+
+
+def merge_navigation_results(
+    results: list[SearchResult], *, limit: int, max_per_source: int
+) -> list[SearchResult]:
     by_identifier: dict[str, SearchResult] = {}
     for result in results:
         existing = by_identifier.get(result.identifier)
         if existing is None or result.score > existing.score:
             by_identifier[result.identifier] = result
-    return sorted(by_identifier.values(), key=lambda result: result.score, reverse=True)[:limit]
+
+    source_order: list[str] = []
+    by_source: dict[str, list[SearchResult]] = {}
+    for result in by_identifier.values():
+        if result.source not in by_source:
+            source_order.append(result.source)
+            by_source[result.source] = []
+        by_source[result.source].append(result)
+    for source_results in by_source.values():
+        source_results.sort(key=lambda result: result.score, reverse=True)
+
+    selected: list[SearchResult] = []
+    source_counts = {source: 0 for source in source_order}
+    while len(selected) < limit:
+        added = False
+        for source in source_order:
+            if len(selected) >= limit:
+                break
+            if source_counts[source] >= max_per_source:
+                continue
+            source_results = by_source[source]
+            if not source_results:
+                continue
+            selected.append(source_results.pop(0))
+            source_counts[source] += 1
+            added = True
+        if not added:
+            break
+    return selected
 
 
 def _error_detail(exc: Exception) -> str:
@@ -163,7 +197,8 @@ def navigate(  # noqa: C901, PLR0915 - traversal orchestration is clearer in one
     kind: str = "all",
     limit: int = 10,
     max_depth: int = 2,
-    max_registries: int = 10,
+    max_registries: int = 3,
+    max_per_source: int = 3,
     follow_referrals: bool = False,
     timeout: float = 10.0,
     token: str | None = None,
@@ -171,7 +206,7 @@ def navigate(  # noqa: C901, PLR0915 - traversal orchestration is clearer in one
     request_body = SearchRequest(
         query=SearchQuery(text=query, filter=filter_for_kind(kind)),
         federation="referrals" if follow_referrals else "none",
-        pageSize=limit,
+        pageSize=min(limit, max_per_source),
     )
     discovered: list[DiscoveredResource] = []
     results: list[SearchResult] = []
@@ -200,7 +235,7 @@ def navigate(  # noqa: C901, PLR0915 - traversal orchestration is clearer in one
             )
             return
         discovered.append(DiscoveredResource("registry", search_url))
-        results.extend(response.results)
+        results.extend(_with_source(result, search_url) for result in response.results)
         referrals.extend(response.referrals)
         if follow_referrals:
             for referral in response.referrals:
@@ -239,7 +274,8 @@ def navigate(  # noqa: C901, PLR0915 - traversal orchestration is clearer in one
                 if result is not None:
                     results.append(result)
 
-    results = apply_entry_filters(_merge_results(results, limit=limit), request_body.query.filter)
+    results = apply_entry_filters(results, request_body.query.filter)
+    results = merge_navigation_results(results, limit=limit, max_per_source=max_per_source)
     return NavigationReport(
         response=SearchResponse(results=results[:limit], referrals=referrals),
         discovered=discovered,

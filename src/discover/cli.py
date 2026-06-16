@@ -611,7 +611,16 @@ def navigate_command(  # noqa: PLR0913 - Typer command surface maps user-facing 
         typer.Option(
             "--max-registries", min=1, max=50, help="Maximum registry endpoints to query."
         ),
-    ] = 10,
+    ] = 3,
+    max_per_source: Annotated[
+        int,
+        typer.Option(
+            "--max-per-source",
+            min=1,
+            max=25,
+            help="Maximum results to keep from each discovered catalog or registry.",
+        ),
+    ] = 3,
     timeout: Annotated[
         float,
         typer.Option("--timeout", min=1.0, max=60.0, help="HTTP timeout per request in seconds."),
@@ -632,6 +641,7 @@ def navigate_command(  # noqa: PLR0913 - Typer command surface maps user-facing 
             follow_referrals=follow_referrals,
             max_depth=max_depth,
             max_registries=max_registries,
+            max_per_source=max_per_source,
             timeout=timeout,
             token=token,
         )

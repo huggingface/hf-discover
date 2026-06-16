@@ -9,7 +9,13 @@ from typing_extensions import override
 
 from discover import cli
 from discover.cli import DEFAULT_NAVIGATE_URL, parse_navigate_args
-from discover.navigation import navigate, registry_search_url, well_known_catalog_url
+from discover.models import SearchResult
+from discover.navigation import (
+    merge_navigation_results,
+    navigate,
+    registry_search_url,
+    well_known_catalog_url,
+)
 
 
 class NavigationRecorder:
@@ -110,6 +116,38 @@ def test_parse_navigate_args_accepts_explicit_url_and_multi_word_query() -> None
         "https://example.com",
         "generate image",
     )
+
+
+def result(identifier: str, source: str, score: int) -> SearchResult:
+    return SearchResult(
+        identifier=f"urn:ai:example.com:skill:{identifier}",
+        displayName=identifier,
+        type="application/ai-skill",
+        url=f"https://example.com/{identifier}",
+        score=score,
+        source=source,
+    )
+
+
+def test_merge_navigation_results_round_robins_sources_with_cap() -> None:
+    results = [
+        result("a1", "a", 100),
+        result("a2", "a", 99),
+        result("a3", "a", 98),
+        result("b1", "b", 70),
+        result("b2", "b", 69),
+        result("c1", "c", 10),
+    ]
+
+    merged = merge_navigation_results(results, limit=5, max_per_source=2)
+
+    assert [(item.source, item.displayName) for item in merged] == [
+        ("a", "a1"),
+        ("b", "b1"),
+        ("c", "c1"),
+        ("a", "a2"),
+        ("b", "b2"),
+    ]
 
 
 def test_navigate_fetches_well_known_catalog_and_searches_referenced_registry() -> None:
