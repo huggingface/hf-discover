@@ -147,10 +147,7 @@ DEFAULT_NAVIGATE_URL = "https://huggingface.co/"
 NavigateArgs = Annotated[
     list[str],
     typer.Argument(
-        help=(
-            "QUERY, or URL QUERY. When URL is omitted, defaults to "
-            f"{DEFAULT_NAVIGATE_URL}."
-        )
+        help=(f"QUERY, or URL QUERY. When URL is omitted, defaults to {DEFAULT_NAVIGATE_URL}.")
     ),
 ]
 FederationOpt = Annotated[
