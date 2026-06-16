@@ -16,14 +16,17 @@ hf discover "help me train a model" --json
 
 The Server provides semantic search to thousands of Skills and MCP Servers to connect to your agent.
 
-Search our ARDs catalog via: 
+Search our Resource catalog via: 
 
-- Rest API: https://evalstate-hf-discover.hf.space/search
-- MCP: https://evalstate-hf-discover.hf.space/mcp
+- The Rest API: https://evalstate-hf-discover.hf.space/search
+- An MCP Tool: https://evalstate-hf-discover.hf.space/mcp
 
 ## Client Features
 
-T
+The Client can **search** a catalog, or **navigate** a catalog - the main difference being that
+*navigate* queries federated catalogs and combines the results.
+
+By default the Client uses the Hugging Face catalog.
 
 ### Search
 
