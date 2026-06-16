@@ -168,6 +168,17 @@ def test_navigate_fetches_well_known_catalog_and_searches_referenced_registry() 
     }
 
 
+def test_navigate_requests_limit_not_per_source_cap() -> None:
+    server, base_url = serve_navigation_fixture()
+    try:
+        navigate(base_url, "generate image", limit=7, max_per_source=2)
+    finally:
+        server.shutdown()
+
+    assert NavigationRecorder.request_body is not None
+    assert NavigationRecorder.request_body["pageSize"] == 7
+
+
 def test_cli_navigate_shows_discovered_registry_url() -> None:
     server, base_url = serve_navigation_fixture()
     try:

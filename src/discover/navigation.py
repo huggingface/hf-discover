@@ -143,42 +143,36 @@ def _with_source(result: SearchResult, source: str) -> SearchResult:
     return result.model_copy(update={"source": source})
 
 
-def merge_navigation_results(
-    results: list[SearchResult], *, limit: int, max_per_source: int
-) -> list[SearchResult]:
+def _deduplicate_results(results: list[SearchResult]) -> list[SearchResult]:
     by_identifier: dict[str, SearchResult] = {}
     for result in results:
         existing = by_identifier.get(result.identifier)
         if existing is None or result.score > existing.score:
             by_identifier[result.identifier] = result
+    return list(by_identifier.values())
 
-    source_order: list[str] = []
+
+def _rank_by_source(results: list[SearchResult]) -> list[list[SearchResult]]:
     by_source: dict[str, list[SearchResult]] = {}
-    for result in by_identifier.values():
-        if result.source not in by_source:
-            source_order.append(result.source)
-            by_source[result.source] = []
-        by_source[result.source].append(result)
-    for source_results in by_source.values():
-        source_results.sort(key=lambda result: result.score, reverse=True)
+    for result in results:
+        by_source.setdefault(result.source, []).append(result)
+    return [
+        sorted(source_results, key=lambda result: result.score, reverse=True)
+        for source_results in by_source.values()
+    ]
 
+
+def merge_navigation_results(
+    results: list[SearchResult], *, limit: int, max_per_source: int
+) -> list[SearchResult]:
+    ranked_sources = _rank_by_source(_deduplicate_results(results))
     selected: list[SearchResult] = []
-    source_counts = {source: 0 for source in source_order}
-    while len(selected) < limit:
-        added = False
-        for source in source_order:
+    for index in range(max_per_source):
+        for source_results in ranked_sources:
             if len(selected) >= limit:
-                break
-            if source_counts[source] >= max_per_source:
-                continue
-            source_results = by_source[source]
-            if not source_results:
-                continue
-            selected.append(source_results.pop(0))
-            source_counts[source] += 1
-            added = True
-        if not added:
-            break
+                return selected
+            if index < len(source_results):
+                selected.append(source_results[index])
     return selected
 
 
@@ -190,7 +184,7 @@ def _error_detail(exc: Exception) -> str:
     return str(exc)
 
 
-def navigate(  # noqa: C901, PLR0915 - traversal orchestration is clearer in one bounded loop.
+def navigate(  # noqa: C901, PLR0913, PLR0915 - traversal orchestration is clearer in one bounded loop.
     url: str,
     query: str,
     *,
@@ -206,7 +200,7 @@ def navigate(  # noqa: C901, PLR0915 - traversal orchestration is clearer in one
     request_body = SearchRequest(
         query=SearchQuery(text=query, filter=filter_for_kind(kind)),
         federation="referrals" if follow_referrals else "none",
-        pageSize=min(limit, max_per_source),
+        pageSize=limit,
     )
     discovered: list[DiscoveredResource] = []
     results: list[SearchResult] = []
