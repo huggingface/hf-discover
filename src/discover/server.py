@@ -3,15 +3,18 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from typing import TYPE_CHECKING, Annotated, Any, Protocol
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
-from fastapi import Body, FastAPI, Header, HTTPException, Request
+from fastapi import Body, FastAPI, Header, HTTPException, Request, Response
 from fastapi.openapi.models import Example
 from fastapi.responses import JSONResponse, PlainTextResponse
+from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from discover.filters import apply_entry_filters
@@ -41,6 +44,10 @@ AI_REGISTRY_MEDIA_TYPE = "application/ai-registry+json"
 HF_ENDPOINT = "https://huggingface.co"
 HTTP_NOT_FOUND = 404
 PUBLIC_BASE_URL_ENV = "DISCOVER_PUBLIC_BASE_URL"
+MCP_PROTOCOL_VERSION = "2025-06-18"
+MCP_TOOL_NAME = "search"
+MCP_JSONRPC_ERROR_METHOD_NOT_FOUND = -32601
+MCP_JSONRPC_ERROR_INVALID_PARAMS = -32602
 SEARCH_REQUEST_EXAMPLES: dict[str, Example] = {
     "skill": Example(
         summary="Generated AI skill results",
@@ -240,6 +247,13 @@ def _health_payload(search_skills: SearchSkills) -> dict[str, object]:
             },
         },
     }
+
+
+def _project_version() -> str:
+    try:
+        return package_version("hf-discover")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 def _result_kind(artifact_type: str) -> SpaceResultKind | None:
@@ -474,6 +488,273 @@ def fetch_space_info(space_id: str, *, token: bool | str | None = None) -> HfSpa
     if not isinstance(data, dict):
         raise ValueError("Unexpected Hugging Face Space info response")
     return _space_info_from_payload(data)
+
+
+def _json_schema_string(description: str | None = None) -> dict[str, Any]:
+    schema: dict[str, Any] = {"type": "string"}
+    if description is not None:
+        schema["description"] = description
+    return schema
+
+
+def _catalog_entry_json_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": True,
+        "required": ["identifier", "displayName", "type"],
+        "properties": {
+            "identifier": _json_schema_string("Globally unique ARD identifier."),
+            "displayName": _json_schema_string("Human-readable name."),
+            "type": _json_schema_string("AI artifact media type."),
+            "url": _json_schema_string("URL to retrieve the full artifact."),
+            "data": {"type": "object", "additionalProperties": True},
+            "description": _json_schema_string("Short description."),
+            "tags": {"type": "array", "items": _json_schema_string()},
+            "capabilities": {"type": "array", "items": _json_schema_string()},
+            "representativeQueries": {"type": "array", "items": _json_schema_string()},
+            "version": _json_schema_string("Artifact version."),
+            "updatedAt": _json_schema_string("ISO 8601 update timestamp."),
+            "metadata": {"type": "object", "additionalProperties": True},
+            "trustManifest": {"type": "object", "additionalProperties": True},
+        },
+    }
+
+
+def _search_response_json_schema() -> dict[str, Any]:
+    search_result_schema = _catalog_entry_json_schema()
+    search_result_schema["required"] = ["identifier", "displayName", "type", "score", "source"]
+    search_result_schema["properties"] = {
+        **search_result_schema["properties"],
+        "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Semantic relevance rating computed by the registry.",
+        },
+        "source": _json_schema_string("Registry or source where this entry was indexed."),
+    }
+
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["results"],
+        "properties": {
+            "results": {"type": "array", "items": search_result_schema},
+            "referrals": {
+                "type": "array",
+                "description": "Upstream registries recommended to the client.",
+                "items": _catalog_entry_json_schema(),
+            },
+            "pageToken": _json_schema_string("Token for paging subsequent results."),
+        },
+    }
+
+
+def _mcp_search_tool() -> dict[str, Any]:
+    return {
+        "name": MCP_TOOL_NAME,
+        "title": "Hugging Face Agent Resource Discovery (ARDs) Search",
+        "description": (
+            "Search Hugging Face Skills, Spaces, and MCP server Cards using the Agent Resource "
+            "Discovery (ARDs) SearchRequest envelope."
+        ),
+        "inputSchema": SearchRequest.model_json_schema(),
+        "outputSchema": _search_response_json_schema(),
+    }
+
+
+def _mcp_initialize_result() -> dict[str, Any]:
+    return {
+        "protocolVersion": MCP_PROTOCOL_VERSION,
+        "capabilities": {"tools": {}},
+        "serverInfo": {
+            "name": "hf-discover",
+            "title": "Hugging Face Discover",
+            "version": _project_version(),
+        },
+        "instructions": "Use the search tool to discover agentic Hugging Face resources.",
+    }
+
+
+def _mcp_response(request_id: str | int, result: dict[str, Any]) -> JSONResponse:
+    return JSONResponse({"jsonrpc": "2.0", "id": request_id, "result": result})
+
+
+def _mcp_error(
+    request_id: str | int,
+    *,
+    code: int,
+    message: str,
+    data: object | None = None,
+) -> JSONResponse:
+    error: dict[str, object] = {"code": code, "message": message}
+    if data is not None:
+        error["data"] = data
+    return JSONResponse(
+        {"jsonrpc": "2.0", "id": request_id, "error": error},
+        status_code=400,
+    )
+
+
+def _mcp_request_id(message: dict[str, Any]) -> str | int:
+    request_id = message.get("id")
+    if isinstance(request_id, str) or (
+        isinstance(request_id, int) and not isinstance(request_id, bool)
+    ):
+        return request_id
+    raise HTTPException(status_code=400, detail="MCP requests must include a string or integer id")
+
+
+def _mcp_search_result(response: SearchResponse) -> dict[str, Any]:
+    structured = response.model_dump(
+        mode="json",
+        exclude_none=True,
+        exclude_defaults=True,
+    )
+    return {
+        "content": [{"type": "text", "text": json.dumps(structured, indent=2)}],
+        "structuredContent": structured,
+    }
+
+
+def _mcp_call_arguments(message: dict[str, Any]) -> dict[str, Any] | None:
+    params = message.get("params")
+    if not isinstance(params, dict):
+        return None
+    if params.get("name") != MCP_TOOL_NAME:
+        return None
+    arguments = params.get("arguments", {})
+    return arguments if isinstance(arguments, dict) else None
+
+
+def _mcp_accepted_notification(message: dict[str, Any]) -> bool:
+    return message.get("method") == "notifications/initialized" and "id" not in message
+
+
+def _mcp_accepted_response(message: dict[str, Any]) -> bool:
+    return "method" not in message and ("result" in message or "error" in message)
+
+
+async def _mcp_message(request: Request) -> dict[str, Any]:
+    try:
+        message = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON-RPC body") from exc
+    if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
+        raise HTTPException(status_code=400, detail="Invalid JSON-RPC message")
+    return message
+
+
+def _mcp_simple_request(method: object, request_id: str | int) -> JSONResponse | None:
+    if method == "initialize":
+        return _mcp_response(request_id, _mcp_initialize_result())
+    if method == "ping":
+        return _mcp_response(request_id, {})
+    if method == "tools/list":
+        return _mcp_response(request_id, {"tools": [_mcp_search_tool()]})
+    return None
+
+
+def _mcp_search_request(
+    message: dict[str, Any],
+    request_id: str | int,
+) -> SearchRequest | JSONResponse:
+    arguments = _mcp_call_arguments(message)
+    if arguments is None:
+        return _mcp_error(
+            request_id,
+            code=MCP_JSONRPC_ERROR_INVALID_PARAMS,
+            message="Expected tools/call params for the search tool",
+        )
+    try:
+        return SearchRequest.model_validate(arguments)
+    except ValidationError as exc:
+        return _mcp_error(
+            request_id,
+            code=MCP_JSONRPC_ERROR_INVALID_PARAMS,
+            message="Invalid search arguments",
+            data=exc.errors(),
+        )
+
+
+def _mcp_tool_call_response(
+    message: dict[str, Any],
+    request: Request,
+    request_id: str | int,
+    *,
+    include_non_running: bool,
+    token: bool | str | None,
+    search_skills: SearchSkills,
+    search_spaces: SearchSpaces,
+) -> JSONResponse:
+    search_request = _mcp_search_request(message, request_id)
+    if isinstance(search_request, JSONResponse):
+        return search_request
+    response = search_discover(
+        search_request,
+        base_url=_base_url(request),
+        include_non_running=include_non_running,
+        token=effective_hf_token(
+            request_token=hf_token_from_headers(request.headers),
+            configured_token=token,
+        ),
+        search_skills=search_skills,
+        search_spaces=search_spaces,
+    )
+    return _mcp_response(request_id, _mcp_search_result(response))
+
+
+def _mcp_request_response(
+    message: dict[str, Any],
+    request: Request,
+    *,
+    include_non_running: bool,
+    token: bool | str | None,
+    search_skills: SearchSkills,
+    search_spaces: SearchSpaces,
+) -> JSONResponse | Response:
+    if _mcp_accepted_notification(message) or _mcp_accepted_response(message):
+        return Response(status_code=202)
+
+    request_id = _mcp_request_id(message)
+    simple_response = _mcp_simple_request(message.get("method"), request_id)
+    if simple_response is not None:
+        return simple_response
+    if message.get("method") == "tools/call":
+        return _mcp_tool_call_response(
+            message,
+            request,
+            request_id,
+            include_non_running=include_non_running,
+            token=token,
+            search_skills=search_skills,
+            search_spaces=search_spaces,
+        )
+    return _mcp_error(
+        request_id,
+        code=MCP_JSONRPC_ERROR_METHOD_NOT_FOUND,
+        message=f"Unsupported MCP method: {message.get('method')}",
+    )
+
+
+def _add_mcp_route(
+    app: FastAPI,
+    *,
+    include_non_running: bool,
+    token: bool | str | None,
+    search_skills: SearchSkills,
+    search_spaces: SearchSpaces,
+) -> None:
+    @app.post("/mcp", response_class=JSONResponse, response_model=None)
+    async def mcp(request: Request) -> Response:
+        return _mcp_request_response(
+            await _mcp_message(request),
+            request,
+            include_non_running=include_non_running,
+            token=token,
+            search_skills=search_skills,
+            search_spaces=search_spaces,
+        )
 
 
 def _add_spaces_search_route(
@@ -723,6 +1004,13 @@ def create_app(
             search_spaces=search_spaces,
         )
 
+    _add_mcp_route(
+        app,
+        include_non_running=include_non_running,
+        token=token,
+        search_skills=search_skills,
+        search_spaces=search_spaces,
+    )
     _add_explore_route(app)
     _add_spaces_search_route(
         app,
