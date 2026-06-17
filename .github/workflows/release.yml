@@ -117,9 +117,20 @@ jobs:
             exit 0
           fi
           uv run python - <<'PY'
+          import tomllib
+
           from huggingface_hub import HfApi
 
-          HfApi().restart_space("evalstate/hf-discover")
+          with open("hf-discover.toml", "rb") as settings:
+              space = tomllib.load(settings)["space"]
+
+          api = HfApi()
+          api.add_space_variable(
+              space["id"],
+              "DISCOVER_PUBLIC_BASE_URL",
+              space["public_base_url"].rstrip("/"),
+          )
+          api.restart_space(space["id"])
           PY
 
       - name: Create GitHub release
