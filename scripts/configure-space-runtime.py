@@ -80,6 +80,7 @@ def main() -> None:
     skills_bucket = args.skills_index_bucket or nested(settings, "skills_index", "bucket")
     meili_mount = nested(settings, "space", "meilisearch_mount") or "/mnt/meilisearch"
     skills_mount = nested(settings, "space", "skills_index_mount") or "/mnt/skills"
+    public_base_url = nested(settings, "space", "public_base_url")
     version = (
         args.meilisearch_version or nested(settings, "meilisearch", "vendor", "version") or "1.44.0"
     )
@@ -133,6 +134,11 @@ def main() -> None:
             "DISCOVER_MEILI_URL=http://127.0.0.1:7700",
             "-e",
             "DISCOVER_MEILI_INDEX=hf_skills",
+            *(
+                ["-e", f"DISCOVER_PUBLIC_BASE_URL={public_base_url.rstrip('/')}"]
+                if isinstance(public_base_url, str) and public_base_url
+                else []
+            ),
         ]
     )
 

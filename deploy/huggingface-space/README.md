@@ -31,7 +31,8 @@ Plain deployment sketch:
    checksum/manifest next to it, and syncs that folder to the configured binary bucket.
 2. `scripts/configure-space-runtime.py` creates configured writable buckets when needed,
    attaches the Meilisearch binary bucket and public `huggingface/skills` bucket as Space
-   volumes, sets runtime variables, and stores `MEILI_MASTER_KEY` as a Space secret.
+   volumes, sets runtime variables including canonical `DISCOVER_PUBLIC_BASE_URL`, and
+   stores `MEILI_MASTER_KEY` as a Space secret.
 3. `start-discover.sh` copies the mounted Meilisearch binary locally, verifies its
    checksum from the mounted manifest, starts Meilisearch on `127.0.0.1:7700`, loads the
    mounted `index/latest/hf-skills.ndjson` artifact into `hf_skills`, then starts the ARD
@@ -55,9 +56,9 @@ Expected runtime variables:
   `https://huggingface.co/buckets/huggingface/skills/resolve/distribution%2Flatest`
 - `DISCOVER_MEILI_URL`, default `http://127.0.0.1:7700`
 - `DISCOVER_MEILI_INDEX`, default `hf_skills`
-- `DISCOVER_PUBLIC_BASE_URL`, optional canonical public URL used in discovery
-  documents, referrals, and generated skill URLs when the runtime reports an internal
-  base URL; leave unset/blank by default
+- `DISCOVER_PUBLIC_BASE_URL`, canonical public URL used in discovery documents,
+  referrals, generated skill URLs, and generated MCP `server.json` URLs; configured as
+  `https://huggingface-hf-discover.hf.space` for the hosted Space
 - `MEILI_MASTER_KEY`, configured as a Space secret
 
 Useful endpoints:

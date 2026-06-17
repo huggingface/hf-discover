@@ -20,7 +20,7 @@ MCP_SERVER_SCHEMA_URL = (
 )
 HF_SPACE_MEDIA_TYPE = "application/vnd.huggingface.space+json"
 HF_SOURCE = "https://huggingface.co"
-SPACES_URL_PREFIX = "https://evalstate-hf-discover.hf.space"
+SPACES_URL_PREFIX = "https://huggingface-hf-discover.hf.space"
 DEFAULT_BASE_URL = SPACES_URL_PREFIX
 MCP_SERVER_TAG = "mcp-server"
 

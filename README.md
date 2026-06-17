@@ -18,8 +18,8 @@ The Server provides semantic search to thousands of Skills and MCP Servers to co
 
 Search our Resource catalog via: 
 
-- The Rest API: https://evalstate-hf-discover.hf.space/search
-- An MCP Tool: https://evalstate-hf-discover.hf.space/mcp
+- The Rest API: https://huggingface-hf-discover.hf.space/search
+- An MCP Tool: https://huggingface-hf-discover.hf.space/mcp
 
 ## Client Features
 
@@ -241,7 +241,10 @@ exist if the repository requires explicit environment configuration.
 
 ### Hugging Face Space Deployment
 
-The project includes a reproducible Docker Space definition in `deploy/huggingface-space/`.
+The default hosted deployment is
+`https://huggingface-hf-discover.hf.space/`, backed by the
+`huggingface/hf-discover` Space. The project includes a reproducible Docker Space
+definition in `deploy/huggingface-space/`.
 It uses the official uv Python image and runs the latest published `hf-discover` package
 with `uvx --refresh`, so restarting or rebuilding the Space resolves the newest PyPI
 release without committing generated application code to the Space repository. This keeps
@@ -255,9 +258,12 @@ bucket-hosted `.tar.gz` URLs when the mounted distribution index is available, w
 source GitHub URLs remain in result metadata. When Meilisearch starts successfully, the
 wrapper exports the configured Meilisearch URL and index for the API process so
 `POST /search` includes loaded Skills results alongside Spaces results. Helper scripts in
-`scripts/` vendor the pinned Meilisearch binary, create configured writable buckets,
-attach bucket volumes, and configure runtime variables without running unsupervised
-installer scripts in the Space.
+`scripts/` vendor the pinned Meilisearch binary to the configured
+`huggingface/meilisearch-binary` bucket, create configured writable buckets, attach bucket
+volumes, and configure runtime variables without running unsupervised installer scripts in
+the Space. `scripts/configure-space-runtime.py` also sets `DISCOVER_PUBLIC_BASE_URL` from
+`hf-discover.toml` so discovery documents, referrals, generated skill URLs, and generated
+MCP `server.json` URLs use the canonical `huggingface-hf-discover.hf.space` base.
 
 The documentation here is intentionally an orientation record: it states the deployment
 idea and points to the artifacts that contain the operational evidence. For details, read

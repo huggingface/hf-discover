@@ -1,12 +1,13 @@
 [meilisearch.vendor]
 version = "1.44.0"
 platform = "linux-amd64"
-bucket = "hf://buckets/evalstate/meilisearch-binary"
+bucket = "hf://buckets/huggingface/meilisearch-binary"
 
 [skills_index]
 bucket = "hf://buckets/huggingface/skills"
 
 [space]
-id = "evalstate/hf-discover"
+id = "huggingface/hf-discover"
+public_base_url = "https://huggingface-hf-discover.hf.space"
 meilisearch_mount = "/mnt/meilisearch"
 skills_index_mount = "/mnt/skills"
