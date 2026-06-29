@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 
@@ -120,7 +121,7 @@ def test_parse_navigate_args_accepts_explicit_url_and_multi_word_query() -> None
 
 def result(identifier: str, source: str, score: int) -> SearchResult:
     return SearchResult(
-        identifier=f"urn:ai:example.com:skill:{identifier}",
+        identifier=f"urn:air:example.com:skill:{identifier}",
         displayName=identifier,
         type="application/ai-skill",
         url=f"https://example.com/{identifier}",
@@ -194,3 +195,52 @@ def test_cli_navigate_shows_discovered_registry_url() -> None:
     assert f"{base_url}/.well-known/ai-catalog.json" in result.output
     assert f"{base_url}/registry/search" in result.output
     assert "Image Skill" in result.output
+
+
+def test_navigate_warns_when_external_entries_use_legacy_urn_ai_prefix() -> None:
+    # DEPRECATED(urn:ai): remove with urn:ai support.
+    server, base_url = serve_navigation_fixture()
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DeprecationWarning)
+            navigate(base_url, "generate image", kind="skill", limit=3)
+    finally:
+        server.shutdown()
+
+    legacy_warnings = [
+        record
+        for record in caught
+        if issubclass(record.category, DeprecationWarning) and "urn:ai:" in str(record.message)
+    ]
+    catalog_url = f"{base_url}/.well-known/ai-catalog.json"
+    registry_url = f"{base_url}/registry/search"
+    messages = [str(record.message) for record in legacy_warnings]
+    assert any(
+        "urn:ai:example.com:registry:tools" in message and catalog_url in message
+        for message in messages
+    )
+    assert any(
+        "urn:ai:example.com:skill:image" in message and registry_url in message
+        for message in messages
+    )
+
+
+def test_navigate_dedupes_legacy_urn_warning_per_source_within_traversal() -> None:
+    # DEPRECATED(urn:ai): remove with urn:ai support.
+    server, base_url = serve_navigation_fixture()
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DeprecationWarning)
+            navigate(base_url, "generate image", kind="skill", limit=3)
+    finally:
+        server.shutdown()
+
+    catalog_url = f"{base_url}/.well-known/ai-catalog.json"
+    catalog_messages = [
+        str(record.message)
+        for record in caught
+        if issubclass(record.category, DeprecationWarning)
+        and "urn:ai:example.com:registry:tools" in str(record.message)
+        and catalog_url in str(record.message)
+    ]
+    assert len(catalog_messages) == 1

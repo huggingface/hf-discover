@@ -128,9 +128,11 @@ Space-specific.
 
 The registry uses the ARD v0.5 search envelope: artifact type constraints are
 expressed as `query.filter.type`, response entries use the catalog `type` field, and
-Hugging Face entries use domain-anchored `urn:ai:huggingface.co:...` identifiers. Catalog entry
-models enforce the v0.5 strict value-or-reference rule, domain-anchored `urn:ai:<fqdn>:...`
-identifiers, and integer 0-100 relevance scores.
+Hugging Face entries use domain-anchored `urn:air:huggingface.co:...` identifiers. Catalog entry
+models enforce the v0.5 strict value-or-reference rule, domain-anchored `urn:air:<fqdn>:...`
+identifiers, and integer 0-100 relevance scores. The legacy `urn:ai:` prefix from
+earlier drafts is still accepted during the transition and emits a `DeprecationWarning`
+when encountered; new publishers MUST use `urn:air:`.
 
 Structured filters use the ARD v0.5 field-path semantics for exact matching after
 retrieval: scalar filter values are treated like single-item arrays, values within one
@@ -141,7 +143,7 @@ is derived from the entry identifier's publisher domain.
 The primary server exposes `GET /.well-known/ai-catalog.json` as an ARD discovery
 document. It advertises the primary Hugging Face Discover registry and the nested
 Spaces registry as `application/ai-registry+json` entries using v0.5 `type` fields,
-domain-anchored `urn:ai:huggingface.co:...` identifiers, and registry service base URLs. Clients
+domain-anchored `urn:air:huggingface.co:...` identifiers, and registry service base URLs. Clients
 append `/search` to those base URLs for Search requests.
 
 By default, advertised registry base URLs, generated Space skill URLs, and generated MCP

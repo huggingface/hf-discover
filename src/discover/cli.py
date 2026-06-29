@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from typing import Annotated, Literal
@@ -256,6 +257,8 @@ def parse_navigate_args(args: list[str]) -> tuple[str, str]:
 @app.callback()
 def main(version_requested: VersionOpt = False) -> None:
     """ARD registry adapters."""
+    # DEPRECATED(urn:ai): surface legacy-prefix warnings on stderr.
+    warnings.filterwarnings("default", category=DeprecationWarning, module="discover.*")
     if version_requested:
         _print_version()
         raise typer.Exit

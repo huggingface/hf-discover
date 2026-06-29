@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FederationMode = Literal["auto", "referrals", "none"]
-URN_AI_IDENTIFIER_RE = re.compile(
-    r"^urn:ai:"
+_URN_AIR_BODY = (
     r"(?P<publisher>(?=.{1,253}:)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
     r"[A-Za-z]{2,63})"
     r":[A-Za-z0-9._~!$&'()*+,;=@%-]+"
     r"(?::[A-Za-z0-9._~!$&'()*+,;=@%-]+)*$"
 )
+URN_AIR_IDENTIFIER_RE = re.compile(r"^urn:air:" + _URN_AIR_BODY)
+# DEPRECATED(urn:ai): legacy ARD prefix accepted during transition; remove with urn:ai support.
+URN_AI_LEGACY_IDENTIFIER_RE = re.compile(r"^urn:ai:" + _URN_AIR_BODY)
 
 
 class CatalogEntry(BaseModel):
@@ -37,12 +40,23 @@ class CatalogEntry(BaseModel):
     @field_validator("identifier")
     @classmethod
     def validate_identifier(cls, value: str) -> str:
-        if URN_AI_IDENTIFIER_RE.fullmatch(value) is None:
-            raise ValueError(
-                "identifier must use domain-anchored ARD URN format "
-                "urn:ai:<publisher-fqdn>:<namespace-or-name>[:<agent-name>...]"
+        if URN_AIR_IDENTIFIER_RE.fullmatch(value) is not None:
+            return value
+        # DEPRECATED(urn:ai): accept legacy prefix and warn; remove with urn:ai support.
+        if URN_AI_LEGACY_IDENTIFIER_RE.fullmatch(value) is not None:
+            warnings.warn(
+                f"ARD identifier {value!r} uses the deprecated 'urn:ai:' prefix; "
+                "the spec has renamed it to 'urn:air:'. Update publishers before "
+                "'urn:ai:' support is removed.",
+                DeprecationWarning,
+                stacklevel=2,
             )
-        return value
+            return value
+        raise ValueError(
+            "identifier must use domain-anchored ARD URN format "
+            "urn:air:<publisher-fqdn>:<namespace-or-name>[:<agent-name>...] "
+            "(legacy 'urn:ai:' is accepted with a deprecation warning during transition)"
+        )
 
     @model_validator(mode="after")
     def validate_value_or_reference(self) -> CatalogEntry:

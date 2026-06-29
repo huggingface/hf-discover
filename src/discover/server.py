@@ -164,7 +164,7 @@ def _spaces_registry_base_url(base_url: str) -> str:
 
 def _spaces_registry_referral(base_url: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier="urn:ai:huggingface.co:registry:spaces",
+        identifier="urn:air:huggingface.co:registry:spaces",
         displayName="Hugging Face Spaces Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=_spaces_registry_search_url(base_url),
@@ -178,7 +178,7 @@ def _spaces_registry_referral(base_url: str) -> CatalogEntry:
 
 def _spaces_registry_catalog_entry(base_url: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier="urn:ai:huggingface.co:registry:spaces",
+        identifier="urn:air:huggingface.co:registry:spaces",
         displayName="Hugging Face Spaces Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=_spaces_registry_base_url(base_url),
@@ -192,7 +192,7 @@ def _spaces_registry_catalog_entry(base_url: str) -> CatalogEntry:
 
 def _registry_catalog_entry(base_url: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier="urn:ai:huggingface.co:registry:discover",
+        identifier="urn:air:huggingface.co:registry:discover",
         displayName="Hugging Face Discover Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=base_url.rstrip("/"),

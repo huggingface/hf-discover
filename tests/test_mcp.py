@@ -32,7 +32,7 @@ class RecordingSkillsSearch:
         self.queries.append((query, limit))
         return [
             SearchResult(
-                identifier="urn:ai:github.com:huggingface:skills:image",
+                identifier="urn:air:github.com:huggingface:skills:image",
                 displayName="Image Skill",
                 type=AI_SKILL_MEDIA_TYPE,
                 url="https://github.com/huggingface/skills/tree/main/skills/image",
