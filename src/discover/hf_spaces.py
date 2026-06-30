@@ -111,15 +111,15 @@ def hf_space_mcp_url(space_id: str, *, app_url: str | None = None) -> str:
 
 
 def hf_space_identifier(space_id: str) -> str:
-    return f"urn:ai:huggingface.co:space:{space_id.replace('/', ':')}"
+    return f"urn:air:huggingface.co:space:{space_id.replace('/', ':')}"
 
 
 def hf_space_skill_identifier(space_id: str) -> str:
-    return f"urn:ai:huggingface.co:skill:space:{space_id.replace('/', ':')}"
+    return f"urn:air:huggingface.co:skill:space:{space_id.replace('/', ':')}"
 
 
 def hf_space_mcp_identifier(space_id: str) -> str:
-    return f"urn:ai:huggingface.co:mcp:space:{space_id.replace('/', ':')}"
+    return f"urn:air:huggingface.co:mcp:space:{space_id.replace('/', ':')}"
 
 
 def split_space_id(space_id: str) -> tuple[str, str]:

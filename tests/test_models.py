@@ -9,11 +9,24 @@ from discover.models import CatalogEntry, SearchResult
 
 def test_catalog_entry_requires_domain_anchored_urn_identifier() -> None:
     entry = CatalogEntry(
-        identifier="urn:ai:example.com:skill:image-editor",
+        identifier="urn:air:example.com:skill:image-editor",
         displayName="Image Editor",
         type=AI_SKILL_MEDIA_TYPE,
         url="https://example.com/SKILL.md",
     )
+
+    assert entry.identifier == "urn:air:example.com:skill:image-editor"
+
+
+def test_catalog_entry_accepts_legacy_urn_ai_prefix_with_deprecation_warning() -> None:
+    # DEPRECATED(urn:ai): remove with urn:ai support.
+    with pytest.warns(DeprecationWarning, match=r"urn:ai:"):
+        entry = CatalogEntry(
+            identifier="urn:ai:example.com:skill:image-editor",
+            displayName="Image Editor",
+            type=AI_SKILL_MEDIA_TYPE,
+            url="https://example.com/SKILL.md",
+        )
 
     assert entry.identifier == "urn:ai:example.com:skill:image-editor"
 
@@ -22,7 +35,7 @@ def test_catalog_entry_requires_domain_anchored_urn_identifier() -> None:
     "identifier",
     [
         "urn:test:skill:image-editor",
-        "urn:ai:example:skill:image-editor",
+        "urn:air:example:skill:image-editor",
         "https://example.com/skill/image-editor",
     ],
 )
@@ -39,7 +52,7 @@ def test_catalog_entry_rejects_non_ard_identifiers(identifier: str) -> None:
 def test_search_result_score_must_be_relevance_percentage() -> None:
     with pytest.raises(ValidationError):
         SearchResult(
-            identifier="urn:ai:example.com:skill:image-editor",
+            identifier="urn:air:example.com:skill:image-editor",
             displayName="Image Editor",
             type=AI_SKILL_MEDIA_TYPE,
             url="https://example.com/SKILL.md",

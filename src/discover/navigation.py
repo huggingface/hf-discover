@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request as UrlRequest
@@ -14,10 +15,37 @@ from discover.filters import apply_entry_filters
 from discover.hf_spaces import AI_SKILL_MEDIA_TYPE, HF_SPACE_MEDIA_TYPE, MCP_SERVER_MEDIA_TYPE
 from discover.models import CatalogEntry, SearchQuery, SearchRequest, SearchResponse, SearchResult
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 AI_CATALOG_MEDIA_TYPES = {"application/ai-catalog+json", "application/ai-catalog"}
 AI_REGISTRY_MEDIA_TYPES = {"application/ai-registry+json", "application/ai-registry"}
 NavigationStatus = Literal["ok", "error", "skipped"]
 MAX_RESPONSE_BYTES = 2_000_000
+
+# DEPRECATED(urn:ai): per-traversal dedup; remove with urn:ai support.
+
+
+def _warn_legacy_urns(
+    identifiers: Iterable[str],
+    *,
+    source: str,
+    seen: set[tuple[str, str]],
+) -> None:
+    # DEPRECATED(urn:ai): remove with urn:ai support.
+    for identifier in identifiers:
+        if not identifier.startswith("urn:ai:"):
+            continue
+        key = (identifier, source)
+        if key in seen:
+            continue
+        seen.add(key)
+        warnings.warn(
+            f"ARD identifier {identifier!r} from {source} uses the deprecated "
+            "'urn:ai:' prefix; the spec has renamed it to 'urn:air:'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
 
 @dataclass(frozen=True)
@@ -208,6 +236,8 @@ def navigate(  # noqa: C901, PLR0913, PLR0915 - traversal orchestration is clear
     catalog_queue: list[tuple[str, int]] = [(well_known_catalog_url(url), 0)]
     visited_catalogs: set[str] = set()
     visited_registries: set[str] = set()
+    # DEPRECATED(urn:ai): per-traversal legacy-prefix warning dedup; remove with urn:ai support.
+    legacy_urn_seen: set[tuple[str, str]] = set()
 
     def visit_registry(registry_url: str) -> None:
         search_url = registry_search_url(registry_url)
@@ -229,6 +259,11 @@ def navigate(  # noqa: C901, PLR0913, PLR0915 - traversal orchestration is clear
             )
             return
         discovered.append(DiscoveredResource("registry", search_url))
+        _warn_legacy_urns(
+            (entry.identifier for entry in (*response.results, *response.referrals)),
+            source=search_url,
+            seen=legacy_urn_seen,
+        )
         results.extend(_with_source(result, search_url) for result in response.results)
         referrals.extend(response.referrals)
         if follow_referrals:
@@ -256,6 +291,11 @@ def navigate(  # noqa: C901, PLR0913, PLR0915 - traversal orchestration is clear
             )
             continue
         discovered.append(DiscoveredResource("catalog", catalog_url))
+        _warn_legacy_urns(
+            (entry.identifier for entry in entries),
+            source=catalog_url,
+            seen=legacy_urn_seen,
+        )
         for entry in entries:
             if entry.type in AI_REGISTRY_MEDIA_TYPES and entry.url is not None:
                 visit_registry(entry.url)

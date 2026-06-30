@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from discover.models import SearchResult
 
-URN_AI_PUBLISHER_PARTS = 3
+URN_AIR_PUBLISHER_PARTS = 3
 TYPE_FILTER_ALIASES = {
     "application/mcp-server+json": "application/mcp-server-card+json",
 }
@@ -13,9 +13,12 @@ TYPE_FILTER_ALIASES = {
 
 def publisher_from_identifier(identifier: str) -> str | None:
     parts = identifier.split(":")
-    if len(parts) >= URN_AI_PUBLISHER_PARTS and parts[0] == "urn" and parts[1] == "ai":
-        return parts[2]
-    return None
+    if len(parts) < URN_AIR_PUBLISHER_PARTS or parts[0] != "urn":
+        return None
+    # DEPRECATED(urn:ai): accept legacy "ai" namespace; remove with urn:ai support.
+    if parts[1] not in {"air", "ai"}:
+        return None
+    return parts[2]
 
 
 def entry_values_at_path(value: Any, path: list[str]) -> list[Any]:

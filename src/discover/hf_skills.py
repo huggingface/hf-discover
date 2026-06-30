@@ -128,7 +128,7 @@ def _skill_key(hit: dict[str, Any]) -> str:
 
 
 def _skill_identifier(skill: str) -> str:
-    return f"urn:ai:github.com:huggingface:skills:{skill.replace('/', ':')}"
+    return f"urn:air:github.com:huggingface:skills:{skill.replace('/', ':')}"
 
 
 def _skill_directory_path(value: str) -> str:

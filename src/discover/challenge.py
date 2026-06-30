@@ -36,7 +36,7 @@ def _score(entry: SearchResult, query: str, index: int) -> int:
 
 def _skill_result(base_url: str, name: str, description: str, score: int) -> SearchResult:
     return SearchResult(
-        identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:skill:{name}",
+        identifier=f"urn:air:{CHALLENGE_PUBLISHER}:challenge:skill:{name}",
         displayName=name,
         type=AI_SKILL_MEDIA_TYPE,
         url=f"{base_url}/artifacts/skills/{name}/SKILL.md",
@@ -51,7 +51,7 @@ def _skill_result(base_url: str, name: str, description: str, score: int) -> Sea
 
 def _mcp_result(base_url: str, name: str, description: str, score: int) -> SearchResult:
     return SearchResult(
-        identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:mcp:{name}",
+        identifier=f"urn:air:{CHALLENGE_PUBLISHER}:challenge:mcp:{name}",
         displayName=f"{name} MCP Server",
         type=MCP_SERVER_MEDIA_TYPE,
         data={
@@ -77,7 +77,7 @@ def _mcp_result(base_url: str, name: str, description: str, score: int) -> Searc
 
 def _a2a_result(name: str, description: str, score: int) -> SearchResult:
     return SearchResult(
-        identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:a2a:{name}",
+        identifier=f"urn:air:{CHALLENGE_PUBLISHER}:challenge:a2a:{name}",
         displayName=f"{name} A2A Agent",
         type=A2A_AGENT_MEDIA_TYPE,
         data={
@@ -97,7 +97,7 @@ def _a2a_result(name: str, description: str, score: int) -> SearchResult:
 
 def _catalog_result(base_url: str, score: int) -> SearchResult:
     return SearchResult(
-        identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:catalog:bundle",
+        identifier=f"urn:air:{CHALLENGE_PUBLISHER}:challenge:catalog:bundle",
         displayName="Challenge Bundle Catalog",
         type=AI_CATALOG_MEDIA_TYPE,
         data={
@@ -105,13 +105,13 @@ def _catalog_result(base_url: str, score: int) -> SearchResult:
             "host": {"displayName": "Challenge Bundle"},
             "entries": [
                 {
-                    "identifier": f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:bundle:skill",
+                    "identifier": f"urn:air:{CHALLENGE_PUBLISHER}:challenge:bundle:skill",
                     "displayName": "Bundled Skill",
                     "type": AI_SKILL_MEDIA_TYPE,
                     "url": f"{base_url}/artifacts/skills/bundled-skill/SKILL.md",
                 },
                 {
-                    "identifier": f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:bundle:mcp",
+                    "identifier": f"urn:air:{CHALLENGE_PUBLISHER}:challenge:bundle:mcp",
                     "displayName": "Bundled MCP",
                     "type": MCP_SERVER_MEDIA_TYPE,
                     "data": {"name": "bundled-mcp", "transport": "stdio", "command": "echo"},
@@ -135,7 +135,7 @@ def _registry_result(
     score: int,
 ) -> SearchResult:
     return SearchResult(
-        identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:registry:{name}",
+        identifier=f"urn:air:{CHALLENGE_PUBLISHER}:challenge:registry:{name}",
         displayName=f"{name.title()} Challenge Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=f"{base_url}{path}",
@@ -150,7 +150,7 @@ def _registry_result(
 
 def _referral(base_url: str, name: str, path: str, description: str) -> CatalogEntry:
     return CatalogEntry(
-        identifier=f"urn:ai:{CHALLENGE_PUBLISHER}:challenge:registry:{name}",
+        identifier=f"urn:air:{CHALLENGE_PUBLISHER}:challenge:registry:{name}",
         displayName=f"{name.title()} Challenge Registry",
         type=AI_REGISTRY_MEDIA_TYPE,
         url=f"{base_url}{path}",
