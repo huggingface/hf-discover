@@ -36,7 +36,7 @@ from discover.hf_spaces import (
 from discover.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
 BEARER_PREFIX = "Bearer "
 AI_CATALOG_MEDIA_TYPE = "application/ai-catalog+json"
@@ -403,11 +403,25 @@ def search_spaces_discover(
     return SearchResponse(results=results[: request.pageSize])
 
 
-def fetch_agents_md(space_id: str) -> str:
-    url = hf_space_agents_md_url(space_id)
+def _read_public_markdown(url: str) -> str:
     request = UrlRequest(url, headers={"User-Agent": "discover/0.1"})  # noqa: S310 - public HF URL
     with urlopen(request, timeout=30) as response:  # noqa: S310 - public HF URL
         return response.read().decode("utf-8")
+
+
+def fetch_agents_md(space_id: str, *, read: Callable[[str], str] = _read_public_markdown) -> str:
+    url = hf_space_agents_md_url(space_id)
+    try:
+        return read(url)
+    except HTTPError as exc:
+        # Static Spaces can publish agents.md without supporting the generated Hub route.
+        # Do not turn authentication, throttling, or server errors into extra requests.
+        if exc.code not in {400, HTTP_NOT_FOUND}:
+            raise
+    owner, name = split_space_id(space_id)
+    return read(
+        f"{HF_ENDPOINT}/spaces/{quote(owner, safe='')}/{quote(name, safe='')}/raw/main/agents.md"
+    )
 
 
 def _string(value: object) -> str:
