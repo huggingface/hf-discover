@@ -252,6 +252,19 @@ def test_complete_empty_snapshot_is_an_explicit_withdrawal(tmp_path: Path):
     assert response.json()["results"] == []
 
 
+@pytest.mark.parametrize("root", ["unrelated", "."])
+def test_entries_must_belong_to_the_declared_direct_child_scope(tmp_path: Path, root: str):
+    path = tmp_path / "catalog.json"
+    payload = snapshot_payload()
+    payload["inventory"]["root"] = root
+    write_snapshot(path, payload)
+    response = TestClient(create_app(environment_catalog=path)).post(
+        "/search", json=search_body("")
+    )
+    assert response.status_code == 503
+    assert "results" not in response.json()
+
+
 def test_capabilities_require_a_matching_agent_tool_declaration(tmp_path: Path):
     path = tmp_path / "catalog.json"
     payload = snapshot_payload()
