@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from discover.filters import apply_entry_filters
 from discover.models import CatalogEntry, SearchRequest, SearchResponse, SearchResult
 
-from .models import ENVIRONMENT_MEDIA_TYPE, Card
+from .models import ENVIRONMENT_MEDIA_TYPE, Card, RepositorySource, SnapshotHeader
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -86,30 +86,30 @@ def _read_payload(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _snapshot_header(payload: dict[str, Any]) -> str:
-    if payload.get("schema_version") != "0.1-draft":
-        raise CatalogReadError("Unsupported environment catalog profile")
-    if payload.get("complete") is not True:
+def _snapshot_header(payload: dict[str, Any]) -> SnapshotHeader:
+    try:
+        header = SnapshotHeader.model_validate(
+            {key: value for key, value in payload.items() if key != "entries"}
+        )
+    except ValidationError as error:
+        raise CatalogReadError("Environment catalog header is incomplete or unsupported") from error
+    if not header.complete:
         raise CatalogReadError("Environment catalog is incomplete")
-    issues = payload.get("issues")
-    if not isinstance(issues, list) or any(
-        not isinstance(item, dict) or item.get("severity") == "error" for item in issues
-    ):
+    if any(item.severity == "error" for item in header.issues):
         raise CatalogReadError("Environment catalog contains inventory failures")
-    digest = payload.get("digest")
     unsigned = {key: value for key, value in payload.items() if key != "digest"}
-    if not isinstance(digest, str) or digest != _digest(unsigned):
+    if header.digest != _digest(unsigned):
         raise CatalogReadError("Environment catalog digest does not match its contents")
-    return digest
+    return header
 
 
-def _entry(raw: object, source: dict[str, Any], publisher: str) -> CatalogEntry:
+def _entry(raw: object, source: RepositorySource, publisher: str) -> CatalogEntry:
     entry = CatalogEntry.model_validate(raw)
     if entry.type != ENVIRONMENT_MEDIA_TYPE or entry.data is None or entry.url is not None:
         raise CatalogReadError("Environment catalog requires complete inline cards")
     card = Card.model_validate(entry.data)
     if any(
-        getattr(card.source, key) != source.get(key)
+        getattr(card.source, key) != getattr(source, key)
         for key in ("provider", "id", "uri", "revision")
     ):
         raise CatalogReadError("Entry differs from the recorded inventory source")
@@ -119,39 +119,33 @@ def _entry(raw: object, source: dict[str, Any], publisher: str) -> CatalogEntry:
         raise CatalogReadError("Entry does not identify one published revision card")
     if any(name.casefold() in CONTROL_NAMES for name in entry.capabilities):
         raise CatalogReadError("Agent capabilities contain simulation controls")
+    if entry.capabilities and not any(item.role == "agent-tools" for item in card.interfaces):
+        raise CatalogReadError("Agent capabilities require a source-bound tool declaration")
     return entry
 
 
-def _entries(payload: dict[str, Any]) -> list[CatalogEntry]:
+def _entries(payload: dict[str, Any], header: SnapshotHeader) -> list[CatalogEntry]:
     raw = payload.get("entries")
-    source = payload.get("source")
-    publisher = payload.get("publisher")
-    if not isinstance(raw, list) or not isinstance(source, dict) or not isinstance(publisher, str):
-        raise CatalogReadError("Catalog source or entries are missing")
+    if not isinstance(raw, list):
+        raise CatalogReadError("Catalog entries are missing")
     try:
-        return [_entry(item, source, publisher) for item in raw]
+        return [_entry(item, header.source, header.publisher) for item in raw]
     except ValidationError as error:
         raise CatalogReadError("Environment metadata is incomplete or unsupported") from error
 
 
 def load_snapshot(path: Path) -> Snapshot:
     payload = _read_payload(path)
-    digest = _snapshot_header(payload)
-    entries = _entries(payload)
-    inventory = payload.get("inventory", {})
-    paths = inventory.get("paths") if isinstance(inventory, dict) else None
+    header = _snapshot_header(payload)
+    entries = _entries(payload, header)
     found = [Card.model_validate(entry.data).source.path for entry in entries]
-    if (
-        not isinstance(paths, list)
-        or not all(isinstance(path, str) for path in paths)
-        or sorted(found) != sorted(paths)
-    ):
+    if sorted(found) != sorted(header.inventory.paths):
         raise CatalogReadError("Catalog does not cover its declared inventory")
     if len(found) != len(set(found)) or len(entries) != len(
         {entry.identifier for entry in entries}
     ):
         raise CatalogReadError("Catalog contains duplicate environment identities")
-    return Snapshot(digest=digest, entries=entries)
+    return Snapshot(digest=header.digest, entries=entries)
 
 
 def _query_hash(request: SearchRequest) -> str:

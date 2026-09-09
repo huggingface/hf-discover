@@ -210,3 +210,66 @@ def test_malformed_inventory_returns_a_source_error_instead_of_crashing(tmp_path
     write_snapshot(path, payload)
     response = TestClient(create_app(environment_catalog=path)).post("/search", json=search_body())
     assert response.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("publisher", ""),
+        ("publisher", "not a publisher"),
+        ("source", {}),
+        ("generator", {"name": "openenv-git-catalog", "version": "future"}),
+        ("inventory", {"paths": []}),
+        ("issues", [{"severity": "unrecognized"}]),
+    ],
+)
+def test_invalid_empty_snapshot_cannot_authorize_withdrawal(
+    tmp_path: Path, field: str, value: object
+):
+    path = tmp_path / "catalog.json"
+    payload = snapshot_payload()
+    payload["entries"] = []
+    payload["inventory"]["paths"] = []
+    payload[field] = value
+    write_snapshot(path, payload)
+    response = TestClient(create_app(environment_catalog=path)).post(
+        "/search", json=search_body("")
+    )
+    assert response.status_code == 503
+    assert "results" not in response.json()
+
+
+def test_complete_empty_snapshot_is_an_explicit_withdrawal(tmp_path: Path):
+    path = tmp_path / "catalog.json"
+    payload = snapshot_payload()
+    payload["entries"] = []
+    payload["inventory"]["paths"] = []
+    write_snapshot(path, payload)
+    response = TestClient(create_app(environment_catalog=path)).post(
+        "/search", json=search_body("")
+    )
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+def test_capabilities_require_a_matching_agent_tool_declaration(tmp_path: Path):
+    path = tmp_path / "catalog.json"
+    payload = snapshot_payload()
+    payload["entries"][0]["capabilities"] = ["echo_message"]
+    write_snapshot(path, payload)
+    response = TestClient(create_app(environment_catalog=path)).post("/search", json=search_body())
+    assert response.status_code == 503
+    assert "results" not in response.json()
+
+    payload["entries"][0]["data"]["interfaces"].append(
+        {
+            "role": "agent-tools",
+            "protocol": "mcp",
+            "status": "declared",
+            "source_revision": REVISION,
+        }
+    )
+    write_snapshot(path, payload)
+    response = TestClient(create_app(environment_catalog=path)).post("/search", json=search_body())
+    assert response.status_code == 200
+    assert response.json()["results"][0]["capabilities"] == ["echo_message"]

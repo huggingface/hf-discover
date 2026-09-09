@@ -1,47 +1,104 @@
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 ENVIRONMENT_MEDIA_TYPE = "application/vnd.openenv.environment-card+json"
 Text = Annotated[str, StringConstraints(min_length=1, max_length=8192, pattern=r"\S")]
 Revision = Annotated[str, StringConstraints(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")]
+Publisher = Annotated[
+    str,
+    StringConstraints(
+        min_length=3,
+        max_length=253,
+        pattern=r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$",
+    ),
+]
+
+
+def relative_path(value: str) -> str:
+    if value != "." and (
+        "\x00" in value
+        or "\\" in value
+        or any(part in ("", ".", "..") for part in value.split("/"))
+    ):
+        raise ValueError("Invalid repository-relative locator")
+    return value
+
+
+RelativePath = Annotated[Text, AfterValidator(relative_path)]
 
 
 class ProfileModel(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
 
-class Source(ProfileModel):
+class RepositorySource(ProfileModel):
     provider: Literal["github"]
     id: Text
     uri: Text
-    path: Text
     revision: Revision
 
     @model_validator(mode="after")
-    def source_identity(self) -> Source:
+    def source_identity(self) -> RepositorySource:
         parsed = urlsplit(self.uri)
         expected_path = f"/{self.id}.git"
-        if (parsed.scheme, parsed.netloc, parsed.path) != ("https", "github.com", expected_path):
+        if (parsed.scheme, parsed.netloc.lower(), parsed.path) != (
+            "https",
+            "github.com",
+            expected_path,
+        ):
             raise ValueError("Unsupported or inconsistent repository identity")
-        owner, separator, repository = self.id.partition("/")
         if (
             parsed.query
             or parsed.fragment
-            or not separator
-            or not owner
-            or not repository
-            or "/" in repository
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", self.id)
+            or any(part in (".", "..") for part in self.id.split("/"))
         ):
             raise ValueError("Invalid repository identity")
-        if self.path != "." and (
-            "\\" in self.path or any(part in ("", ".", "..") for part in self.path.split("/"))
-        ):
-            raise ValueError("Invalid environment locator")
         return self
+
+
+class Source(RepositorySource):
+    path: RelativePath
+
+
+class Generator(ProfileModel):
+    name: Literal["openenv-git-catalog"]
+    version: Literal["1"]
+
+
+class Inventory(ProfileModel):
+    root: RelativePath
+    paths: list[RelativePath]
+
+
+class CatalogIssue(ProfileModel):
+    path: RelativePath
+    code: Text
+    message: Text
+    severity: Literal["warning", "error"]
+
+
+class SnapshotHeader(ProfileModel):
+    schema_version: Literal["0.1-draft"]
+    publisher: Publisher
+    source: RepositorySource
+    generator: Generator
+    inventory: Inventory
+    issues: list[CatalogIssue]
+    complete: bool
+    digest: Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")]
 
 
 class Artifact(ProfileModel):
