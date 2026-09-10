@@ -40,6 +40,14 @@ hf discover search "transcribe some audio" --kind mcp --json
 hf discover search --registry-url https://registry.example "generate image" --kind skill --json
 ```
 
+For machine-readable pipelines, `--json` writes one ARD `SearchResponse` document to
+standard output without table formatting. Redirect it to a file or pipe it to a downstream
+consumer:
+
+```bash
+hf discover search "transcribe some audio" --kind mcp --json > search-response.json
+```
+
 ### Navigate
 
 Use navigate if you want automatic `.well-known/ai-catalog.json` discovery from a website, and to

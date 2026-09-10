@@ -4,7 +4,7 @@ import json
 import warnings
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TextIO
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 from urllib.request import Request as UrlRequest
@@ -477,9 +477,10 @@ def _print_results(response: SearchResponse, *, title: str = "Search Results") -
     console.print(table)
 
 
-def _print_raw_json(raw_body: str) -> None:
-    console.file.write(raw_body)
-    console.file.write("\n")
+def _print_raw_json(raw_body: str, *, output: TextIO | None = None) -> None:
+    destination = output if output is not None else console.file
+    destination.write(raw_body)
+    destination.write("\n")
 
 
 def _print_navigation_discovery(report: NavigationReport) -> None:
