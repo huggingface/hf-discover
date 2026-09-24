@@ -25,15 +25,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: write
-  id-token: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+permissions: {}
+
 jobs:
   build:
+    permissions:
+      contents: write
+      id-token: write
     name: Build release artifacts
     runs-on: ubuntu-latest
     environment: pypi
