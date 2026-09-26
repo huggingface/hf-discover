@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from importlib.metadata import entry_points, version
 from inspect import signature
+from io import StringIO
 from typing import Any, cast
 
 import typer
@@ -80,6 +82,21 @@ def test_search_command_hides_local_base_url_escape_hatch() -> None:
     assert options_by_name["registry_url"].hidden is False
     assert options_by_name["local"].hidden is False
     assert options_by_name["base_url"].hidden is True
+
+
+def test_raw_json_output_is_machine_readable_and_byte_preserving() -> None:
+    raw_body = (
+        '{"results":[{"identifier":"urn:air:example.com:skill:image",'
+        '"displayName":"Image Skill","type":"application/ai-skill",'
+        '"url":"https://example.com/SKILL.md","score":91,'
+        '"source":"https://example.com"}]}'
+    )
+    output = StringIO()
+
+    cli._print_raw_json(raw_body, output=output)
+
+    assert output.getvalue() == f"{raw_body}\n"
+    assert json.loads(output.getvalue())["results"][0]["score"] == 91
 
 
 def test_mcp_server_json_command_is_registered() -> None:
