@@ -13,8 +13,12 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+permissions: {}
+
 jobs:
   quality:
+    permissions:
+      contents: read
     name: Ruff, ty, and pytest
     runs-on: ubuntu-latest
 
