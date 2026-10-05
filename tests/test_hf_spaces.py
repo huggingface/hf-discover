@@ -491,6 +491,29 @@ def test_space_results_prefer_runtime_domain_for_app_and_mcp_urls() -> None:
     assert mcp_result.metadata["mcpUrl"] == "https://custom-runtime-domain.hf.space/gradio_api/mcp/"
 
 
+def test_space_results_prefer_ready_canonical_domain_over_stale_runtime_alias() -> None:
+    runtime = Runtime(
+        stage="RUNNING",
+        raw={
+            "domains": [
+                {"domain": "old-owner-mcp.hf.space", "stage": "READY"},
+                {"domain": "new-owner-mcp.hf.space", "stage": "READY"},
+            ]
+        },
+    )
+    space = Space(
+        id="new-owner/mcp", tags=["mcp-server"], runtime=runtime, subdomain="new-owner-mcp"
+    )
+
+    result = space_to_search_result(cast("SpaceSearchResultLike", space), kind="mcp")
+    descriptor = build_space_mcp_server_json(cast("SpaceSearchResultLike", space))
+
+    assert result.metadata["mcpUrl"] == "https://new-owner-mcp.hf.space/gradio_api/mcp/"
+    assert descriptor["remotes"] == [
+        {"type": "streamable-http", "url": "https://new-owner-mcp.hf.space/gradio_api/mcp/"}
+    ]
+
+
 def test_search_hf_spaces_uses_supplied_searcher_and_limit() -> None:
     searcher = Searcher(
         [
