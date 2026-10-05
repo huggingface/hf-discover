@@ -183,6 +183,15 @@ def _runtime_domain(space: SpaceSearchResultLike) -> str | None:
         domains = raw.get("domains")
     if not isinstance(domains, list):
         return None
+    if space.subdomain is not None:
+        canonical_domain = _subdomain_url(space.subdomain).removeprefix("https://")
+        for domain in domains:
+            if (
+                isinstance(domain, dict)
+                and domain.get("stage") == "READY"
+                and domain.get("domain") == canonical_domain
+            ):
+                return canonical_domain
     domain_values = (domain.get("domain") for domain in domains if isinstance(domain, dict))
     return next((value for value in domain_values if isinstance(value, str) and value), None)
 

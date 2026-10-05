@@ -81,9 +81,10 @@ is accepted as a transition alias, but new responses use the `*-card+json` media
 from the pinned ARD spec. Fetching that descriptor performs a direct Hugging Face Space
 info lookup, verifies the Space is tagged `mcp-server`, and synthesizes an MCP
 Registry-style document whose `remotes[]` contains the Space's Gradio `streamable-http`
-MCP endpoint. When Hub runtime metadata includes a Space domain, that domain is used for
-app and MCP URLs; otherwise the adapter falls back to the standard `.hf.space` slug
-convention.
+MCP endpoint. When Hub runtime metadata lists multiple domains, the adapter prefers the
+ready domain matching the Space's canonical subdomain for app and MCP URLs. Otherwise it
+uses the first runtime domain, then the Hub host or subdomain, then the standard
+`.hf.space` slug convention.
 
 The CLI queries the hosted hf-discover deployment by default and can query any
 ARD-compatible registry by passing `--registry-url`. The value may be either a registry
