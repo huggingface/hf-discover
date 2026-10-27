@@ -355,3 +355,7 @@ Face token for the downstream Spaces search call. The server checks
 `X-HF-Authorization: Bearer ...`, then `Authorization: Bearer ...`, then `HF_TOKEN: ...`;
 a header token overrides any token configured when the server starts and is not stored
 beyond the request.
+
+## Features
+
+Space instruction loading falls back to repository `agents.md` when the generated Hub route returns 400 or 404, supporting static Spaces that publish their own instructions. Authentication, rate-limit, and server errors are propagated without fallback.
