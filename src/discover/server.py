@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Protocol
 from urllib.error import HTTPError
 from urllib.parse import quote
@@ -17,6 +18,8 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from discover.environments.api import environment_search
+from discover.environments.models import ENVIRONMENT_MEDIA_TYPE
 from discover.filters import apply_entry_filters
 from discover.hf_skills import search_hf_skills
 from discover.hf_spaces import (
@@ -49,6 +52,17 @@ MCP_TOOL_NAME = "search"
 MCP_JSONRPC_ERROR_METHOD_NOT_FOUND = -32601
 MCP_JSONRPC_ERROR_INVALID_PARAMS = -32602
 SEARCH_REQUEST_EXAMPLES: dict[str, Example] = {
+    "openenv-environment": Example(
+        summary="Declared OpenEnv environment metadata",
+        description="Search the configured, versioned OpenEnv snapshot without running candidates.",
+        value={
+            "query": {
+                "text": "client smoke test",
+                "filter": {"type": [ENVIRONMENT_MEDIA_TYPE]},
+            },
+            "pageSize": 5,
+        },
+    ),
     "skill": Example(
         summary="Generated AI skill results",
         description="Return Hugging Face Spaces as generated `application/ai-skill` entries.",
@@ -343,7 +357,11 @@ def search_discover(
     token: bool | str | None = None,
     search_skills: SearchSkills = search_hf_skills,
     search_spaces: SearchSpaces = search_hf_spaces,
+    environment_catalog: Path | None = None,
 ) -> SearchResponse:
+    environments = environment_search(request, environment_catalog)
+    if environments is not None:
+        return environments
     results: list[SearchResult] = []
     artifact_types = _type_filters(request)
     space_kinds = _space_kinds_for_types(artifact_types)
@@ -556,7 +574,9 @@ def _mcp_search_tool() -> dict[str, Any]:
         "title": "Hugging Face Agent Resource Discovery (ARDs) Search",
         "description": (
             "Search Hugging Face Skills, Spaces, and MCP server Cards using the Agent Resource "
-            "Discovery (ARDs) SearchRequest envelope."
+            "Discovery (ARDs) SearchRequest envelope. For a configured OpenEnv catalog, request "
+            "type application/vnd.openenv.environment-card+json to inspect declared environment "
+            "metadata without executing it."
         ),
         "inputSchema": SearchRequest.model_json_schema(),
         "outputSchema": _search_response_json_schema(),
@@ -686,6 +706,7 @@ def _mcp_tool_call_response(
     token: bool | str | None,
     search_skills: SearchSkills,
     search_spaces: SearchSpaces,
+    environment_catalog: Path | None,
 ) -> JSONResponse:
     search_request = _mcp_search_request(message, request_id)
     if isinstance(search_request, JSONResponse):
@@ -700,6 +721,7 @@ def _mcp_tool_call_response(
         ),
         search_skills=search_skills,
         search_spaces=search_spaces,
+        environment_catalog=environment_catalog,
     )
     return _mcp_response(request_id, _mcp_search_result(response))
 
@@ -712,6 +734,7 @@ def _mcp_request_response(
     token: bool | str | None,
     search_skills: SearchSkills,
     search_spaces: SearchSpaces,
+    environment_catalog: Path | None,
 ) -> JSONResponse | Response:
     if _mcp_accepted_notification(message) or _mcp_accepted_response(message):
         return Response(status_code=202)
@@ -729,6 +752,7 @@ def _mcp_request_response(
             token=token,
             search_skills=search_skills,
             search_spaces=search_spaces,
+            environment_catalog=environment_catalog,
         )
     return _mcp_error(
         request_id,
@@ -744,6 +768,7 @@ def _add_mcp_route(
     token: bool | str | None,
     search_skills: SearchSkills,
     search_spaces: SearchSpaces,
+    environment_catalog: Path | None,
 ) -> None:
     @app.post("/mcp", response_class=JSONResponse, response_model=None)
     async def mcp(request: Request) -> Response:
@@ -754,6 +779,7 @@ def _add_mcp_route(
             token=token,
             search_skills=search_skills,
             search_spaces=search_spaces,
+            environment_catalog=environment_catalog,
         )
 
 
@@ -934,8 +960,13 @@ def create_app(
     search_skills: SearchSkills = search_hf_skills,
     search_spaces: SearchSpaces = search_hf_spaces,
     fetch_space: FetchSpaceInfo = fetch_space_info,
+    environment_catalog: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Hugging Face Discover")
+    configured_catalog = os.environ.get("DISCOVER_OPENENV_CATALOG")
+    environment_catalog = environment_catalog or (
+        Path(configured_catalog) if configured_catalog else None
+    )
 
     @app.get("/health")
     async def health() -> dict[str, object]:
@@ -948,7 +979,7 @@ def create_app(
         response_model=SearchResponse,
         response_model_exclude_none=True,
         response_model_exclude_defaults=True,
-        summary="Search Hugging Face Skills and Spaces",
+        summary="Search resources and configured OpenEnv environments",
         description=(
             "Search indexed Hugging Face Skills and running Hugging Face Spaces through one "
             "ARD search envelope. The nested Spaces registry remains available for "
@@ -1002,6 +1033,7 @@ def create_app(
             ),
             search_skills=search_skills,
             search_spaces=search_spaces,
+            environment_catalog=environment_catalog,
         )
 
     _add_mcp_route(
@@ -1010,6 +1042,7 @@ def create_app(
         token=token,
         search_skills=search_skills,
         search_spaces=search_spaces,
+        environment_catalog=environment_catalog,
     )
     _add_explore_route(app)
     _add_spaces_search_route(

@@ -23,6 +23,14 @@ Search our Resource catalog via:
 
 ## Client Features
 
+### OpenEnv environment catalogs
+
+`hf-discover environments QUERY --catalog SNAPSHOT --json` reads complete,
+versioned OpenEnv metadata without importing or contacting an environment.
+The server and MCP search tool support the same explicitly selected environment
+profile when `DISCOVER_OPENENV_CATALOG` is configured. Existing Skills and Spaces
+search remains unchanged. See [the supported profile and failure behavior](docs/openenv-catalog.md).
+
 The Client can **search** a catalog, or **navigate** a catalog - the main difference being that
 *navigate* queries federated catalogs and combines the results.
 

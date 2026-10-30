@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 from discover.challenge import create_challenge_app
+from discover.environments.cli import environments
 from discover.hf_skills import search_hf_skills
 from discover.hf_spaces import (
     AI_SKILL_MEDIA_TYPE,
@@ -80,6 +81,7 @@ challenge_app = typer.Typer(
     add_completion=False,
 )
 app.add_typer(challenge_app, name="challenge")
+app.command("environments")(environments)
 
 VersionOpt = Annotated[
     bool,
